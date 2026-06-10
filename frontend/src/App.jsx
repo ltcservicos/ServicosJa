@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-route
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './context/ToastContext';
 
+import { LandingPage } from './pages/LandingPage';
 import { Landing } from './pages/Landing';
 import { Entrar } from './pages/Entrar';
 import { Cadastro } from './pages/Cadastro';
@@ -63,7 +64,8 @@ export default function App() {
       <ToastProvider>
         <SessionProvider>
           <Routes>
-            <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
+            <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
+            <Route path="/comecar" element={<PublicOnly><Landing /></PublicOnly>} />
             <Route path="/entrar" element={<PublicOnly><Entrar /></PublicOnly>} />
             <Route path="/cadastro" element={<PublicOnly><Cadastro /></PublicOnly>} />
             <Route path="/admin" element={<Admin />} />
