@@ -59,6 +59,12 @@ model Servico {
   lat          Float?   // geocodificado a partir de bairro+cidade ao postar
   lng          Float?
   estado       String   @default("ABERTO") // ABERTO | AGUARDANDO_APROVACAO | APROVADO | CONCLUIDO | CANCELADO
+  // --- Trabalho externo (importado / postado pelo admin) ---
+  origem        String  @default("PROPRIO") // PROPRIO | EXTERNO
+  contatoExterno String? // WhatsApp do contratante original (só dígitos), quando origem=EXTERNO
+  contatoTipo    String? // WHATSAPP | LINK — como o trabalhador fala com o contratante
+  fonteNome      String? // ex: "empregos.com.br" ou "Admin"
+  fonteUrl       String? // link da vaga/anúncio original (quando contatoTipo=LINK)
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 

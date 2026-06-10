@@ -22,8 +22,10 @@ export class ServicosService {
   // ---------------- helpers ----------------
   private _serializeServico(s: any) {
     if (!s) return null;
+    // contatoExterno (WhatsApp) nunca vai no feed — só é revelado no aceitar()
+    const { contatoExterno, ...rest } = s;
     return {
-      ...s,
+      ...rest,
       fotos: typeof s.fotos === 'string' ? s.fotos.split('|||').filter(Boolean) : s.fotos,
     };
   }
@@ -463,6 +465,21 @@ export class ServicosService {
         data: { servicoId, prestadorId, acao: 'ACEITOU', valorProposto: dto.valorProposto },
       });
 
+      // Trabalho EXTERNO: não há contratante no app — devolve o contato direto
+      // (WhatsApp ou link), para o app abrir a conversa fora.
+      if (s.origem === 'EXTERNO') {
+        return {
+          ok: true,
+          externo: true,
+          contatoTipo: s.contatoTipo,
+          contatoExterno: s.contatoExterno,
+          fonteUrl: s.fonteUrl,
+          titulo: s.titulo,
+          bairro: s.bairro,
+          cidade: s.cidade,
+        };
+      }
+
       await tx.notificacao.create({
         data: {
           usuarioId: s.solicitanteId,
@@ -473,7 +490,7 @@ export class ServicosService {
         },
       });
 
-      return { ok: true };
+      return { ok: true, externo: false };
     });
   }
 

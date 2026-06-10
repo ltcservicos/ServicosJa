@@ -70,7 +70,23 @@ export function Explorar() {
 
   const curtir = (s) => {
     api.curtirTrabalho(s.id)
-      .then(() => toast('❤️ Interesse enviado! Se o cliente gostar, ele te chama no chat.', 'success'))
+      .then((r) => {
+        // Trabalho externo: abre conversa direto fora do app (WhatsApp ou link)
+        if (r?.externo) {
+          if (r.contatoTipo === 'WHATSAPP' && r.contatoExterno) {
+            const msg = encodeURIComponent(
+              `Olá! Vi o trabalho "${r.titulo}" em ${r.bairro || r.cidade} no ServiçoJá e tenho interesse. Podemos conversar?`,
+            );
+            window.open(`https://wa.me/55${r.contatoExterno}?text=${msg}`, '_blank');
+            toast('Abrindo o WhatsApp do contratante… 💬', 'success');
+          } else if (r.fonteUrl) {
+            window.open(r.fonteUrl, '_blank');
+            toast('Abrindo o anúncio original… 🔗', 'success');
+          }
+          return;
+        }
+        toast('❤️ Interesse enviado! Se o cliente gostar, ele te chama no chat.', 'success');
+      })
       .catch((e) => toast(e.message, 'error'));
   };
 
@@ -306,6 +322,11 @@ function SwipeCard({ servico, isTop, depth, onSwipe }) {
           ? <>📍 a {String(servico.distanciaKm).replace('.', ',')} km</>
           : <><Icon.Loc /> {servico.bairro}</>}
       </div>
+      {servico.origem === 'EXTERNO' && (
+        <div className="absolute top-[52px] left-3.5 bg-emerald-500/90 text-bg backdrop-blur-md px-2.5 py-1 rounded-lg text-[11px] font-bold z-[2] flex items-center gap-1">
+          {servico.contatoTipo === 'WHATSAPP' ? '💬 Contato direto no WhatsApp' : '🔗 Contato pelo anúncio'}
+        </div>
+      )}
 
       <div
         ref={stampAcceptRef}

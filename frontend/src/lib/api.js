@@ -81,3 +81,35 @@ class ApiClient {
 }
 
 export const api = new ApiClient();
+
+// === ADMIN (token próprio, separado do app) ===
+const ADMIN_KEY = 'servicoja_admin_token';
+
+class AdminApi {
+  getToken() { return localStorage.getItem(ADMIN_KEY); }
+  setToken(t) { t ? localStorage.setItem(ADMIN_KEY, t) : localStorage.removeItem(ADMIN_KEY); }
+
+  async request(method, path, body) {
+    const headers = { 'Content-Type': 'application/json' };
+    const tk = this.getToken();
+    if (tk) headers.Authorization = `Bearer ${tk}`;
+    const res = await fetch(`/api/admin${path}`, {
+      method, headers, body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      let msg = 'Erro';
+      try { const j = await res.json(); msg = Array.isArray(j.message) ? j.message.join(', ') : (j.message || msg); } catch {}
+      const err = new Error(msg); err.status = res.status; throw err;
+    }
+    return res.status === 204 ? null : res.json();
+  }
+
+  login(usuario, senha) { return this.request('POST', '/login', { usuario, senha }); }
+  resumo()              { return this.request('GET', '/resumo'); }
+  importar(body)        { return this.request('POST', '/importar', body); }
+  postarExterno(body)   { return this.request('POST', '/externo', body); }
+  externos()            { return this.request('GET', '/externos'); }
+  remover(id)           { return this.request('DELETE', `/externos/${id}`); }
+}
+
+export const adminApi = new AdminApi();

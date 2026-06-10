@@ -22,6 +22,7 @@ import { PerfilTrab } from './pages/trabalhador/Perfil';
 import { Conversas } from './pages/chat/Conversas';
 import { Chat } from './pages/chat/Chat';
 import { Avisos } from './pages/Avisos';
+import { Admin } from './pages/Admin';
 
 function Splash() {
   return (
@@ -64,6 +65,7 @@ export default function App() {
             <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
             <Route path="/entrar" element={<PublicOnly><Entrar /></PublicOnly>} />
             <Route path="/cadastro" element={<PublicOnly><Cadastro /></PublicOnly>} />
+            <Route path="/admin" element={<Admin />} />
 
             {/* App do CONTRATANTE */}
             <Route path="/contratar" element={<RequireRole tipo="solicitante"><ContratanteShell /></RequireRole>}>
