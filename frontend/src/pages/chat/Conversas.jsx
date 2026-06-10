@@ -64,7 +64,7 @@ export function Conversas() {
                 )}
               </div>
               <div className="text-[12.5px] text-text-mute truncate mt-0.5">
-                🛠️ {c.servico.titulo}
+                {c.servico ? `🛠️ ${c.servico.titulo}` : `💼 ${c.assunto || 'Contato direto'}`}
               </div>
               <div className={`text-[13.5px] truncate mt-0.5 ${c.naoLidas > 0 ? 'text-text-main font-semibold' : 'text-text-dim'}`}>
                 {c.ultimaMensagem

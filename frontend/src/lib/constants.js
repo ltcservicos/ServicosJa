@@ -10,6 +10,7 @@ export const CATEGORIAS = [
   { nome: 'Jardinagem', icone: '🌿', curto: 'Jardim' },
   { nome: 'Chaveiro', icone: '🔑', curto: 'Chaveiro' },
   { nome: 'Ar-condicionado e refrigeração', icone: '❄️', curto: 'Ar-condicionado' },
+  { nome: 'Outros', icone: '🛠️', curto: 'Outros' },
 ];
 
 export const catIcone = (nome) =>

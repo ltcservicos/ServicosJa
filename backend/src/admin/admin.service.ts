@@ -145,7 +145,7 @@ export class AdminService {
     limite?: number;
   }) {
     const termo = TERMO_BUSCA[opts.categoria];
-    if (!termo) throw new BadRequestException('Categoria sem mapeamento de busca');
+    if (!termo) throw new BadRequestException('A categoria "Outros" não tem busca automática. Use "Postar manual".');
     const somenteWhatsapp = opts.somenteWhatsapp !== false; // padrão: true
     const limite = Math.min(opts.limite || 12, 20);
     const citySlug = slugify(opts.cidade);

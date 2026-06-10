@@ -100,8 +100,9 @@ export function Chat() {
   }
 
   const aberta = conversa.status === 'ABERTA';
-  const jaFechado = conversa.servico.prestadorAceitoId === conversa.outraParte?.id;
-  const podeFecharNegocio = conversa.souContratante && conversa.servico.estado === 'ABERTO' && aberta;
+  const jaFechado = conversa.servico?.prestadorAceitoId === conversa.outraParte?.id;
+  const podeFecharNegocio = conversa.souContratante && conversa.servico?.estado === 'ABERTO' && aberta;
+  const tituloAssunto = conversa.servico ? `🛠️ ${conversa.servico.titulo}` : `💼 ${conversa.assunto || 'Contato direto'}`;
 
   return (
     <>
@@ -117,7 +118,7 @@ export function Chat() {
         <Avatar name={conversa.outraParte?.nome} size="sm" />
         <div className="flex-1 min-w-0">
           <div className="font-bold text-[16px] truncate">{conversa.outraParte?.nome}</div>
-          <div className="text-[12px] text-text-mute truncate">🛠️ {conversa.servico.titulo}</div>
+          <div className="text-[12px] text-text-mute truncate">{tituloAssunto}</div>
         </div>
       </div>
 
@@ -131,7 +132,7 @@ export function Chat() {
           🤝 Fechar negócio com {primeiroNome(conversa.outraParte?.nome)}
         </button>
       )}
-      {jaFechado && conversa.servico.estado === 'APROVADO' && (
+      {jaFechado && conversa.servico?.estado === 'APROVADO' && (
         <div className="flex-shrink-0 mx-4 mt-3 rounded-xl py-2.5 px-4 text-[13.5px] font-bold text-center bg-emerald-500/15 text-emerald-400">
           🤝 Negócio fechado — combinem os detalhes!
         </div>

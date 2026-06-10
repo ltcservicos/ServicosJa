@@ -45,6 +45,8 @@ model Usuario {
   mensagens               Mensagem[]
   avaliacoesFeitas        Avaliacao[] @relation("AvaliacaoAutor")
   avaliacoesRecebidas     Avaliacao[] @relation("AvaliacaoAlvo")
+  interessesComoContratante InteresseProfissional[] @relation("InteresseContratante")
+  interessesComoTrabalhador InteresseProfissional[] @relation("InteresseTrabalhador")
 }
 
 // === SERVIÇO ===
@@ -120,20 +122,36 @@ model Notificacao {
 // === CONVERSA (chat entre contratante e trabalhador interessado) ===
 model Conversa {
   id            String   @id @default(uuid())
-  servicoId     String
+  servicoId     String?  // null = conversa direta (contratante curtiu o perfil, sem trabalho)
+  assunto       String?  // texto exibido quando não há serviço (ex: "Interesse no seu perfil")
   contratanteId String
   trabalhadorId String
   status        String   @default("ABERTA") // ABERTA | FECHADA
   criadoEm      DateTime @default(now())
   atualizadoEm  DateTime @updatedAt
 
-  servico     Servico @relation(fields: [servicoId], references: [id])
+  servico     Servico? @relation(fields: [servicoId], references: [id])
   contratante Usuario @relation("ConversaContratante", fields: [contratanteId], references: [id])
   trabalhador Usuario @relation("ConversaTrabalhador", fields: [trabalhadorId], references: [id])
   mensagens   Mensagem[]
 
   @@unique([servicoId, trabalhadorId])
   @@index([contratanteId])
+  @@index([trabalhadorId])
+}
+
+// === INTERESSE EM PROFISSIONAL (contratante curte/pula um prestador, sem trabalho) ===
+model InteresseProfissional {
+  id            String   @id @default(uuid())
+  contratanteId String
+  trabalhadorId String
+  status        String   @default("ATIVO") // ATIVO (curtiu) | PULOU
+  criadoEm      DateTime @default(now())
+
+  contratante Usuario @relation("InteresseContratante", fields: [contratanteId], references: [id])
+  trabalhador Usuario @relation("InteresseTrabalhador", fields: [trabalhadorId], references: [id])
+
+  @@unique([contratanteId, trabalhadorId])
   @@index([trabalhadorId])
 }
 

@@ -66,6 +66,11 @@ class ApiClient {
   pularTrabalho(id)       { return this.request('POST', `/feed/${id}/recusar`); }
   meusInteresses()        { return this.request('GET', '/aceites/meus'); }
 
+  // === CONTRATANTE: buscar profissionais (marketplace reverso) ===
+  profissionais(categoria) { return this.request('GET', `/profissionais${categoria ? `?categoria=${encodeURIComponent(categoria)}` : ''}`); }
+  curtirProfissional(id)   { return this.request('POST', `/profissionais/${id}/curtir`); }
+  pularProfissional(id)    { return this.request('POST', `/profissionais/${id}/pular`); }
+
   // === CONVERSAS (chat) ===
   abrirConversa(servicoId, trabalhadorId) { return this.request('POST', '/conversas', { servicoId, trabalhadorId }); }
   conversas()             { return this.request('GET', '/conversas'); }

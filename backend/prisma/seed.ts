@@ -7,6 +7,7 @@ async function main() {
   console.log('🌱 Limpando banco...');
   await prisma.mensagem.deleteMany();
   await prisma.conversa.deleteMany();
+  await prisma.interesseProfissional.deleteMany();
   await prisma.avaliacao.deleteMany();
   await prisma.notificacao.deleteMany();
   await prisma.acaoServico.deleteMany();
@@ -67,6 +68,23 @@ async function main() {
       totalAvaliacoes: 35,
     },
   });
+
+  // Mais profissionais para a busca por profissionais ter conteúdo
+  const maisProfs = [
+    { nome: 'Ana Beatriz', wpp: '5511988880004', cats: 'Limpeza pesada,Jardinagem', desc: 'Diarista e faxina pesada. Caprichosa e pontual, referências comprovadas.', concl: 64, nota: 4.9, av: 52, bairros: 'Santana,Tucuruvi,Vila Maria' },
+    { nome: 'Roberto Souza', wpp: '5511988880005', cats: 'Elétrica,Ar-condicionado e refrigeração', desc: 'Eletricista predial e instalação/limpeza de ar-condicionado split. Atendo emergências.', concl: 33, nota: 4.7, av: 19, bairros: 'Tatuapé,Mooca,Penha' },
+    { nome: 'José Carlos', wpp: '5511988880006', cats: 'Pintura,Pedreiro e reformas pequenas', desc: 'Pintor e pedreiro com 15 anos de estrada. Reformas pequenas e acabamento fino.', concl: 88, nota: 5.0, av: 71, bairros: 'Guarulhos,Vila Galvão,Bonsucesso' },
+    { nome: 'Fernanda Dias', wpp: '5511988880007', cats: 'Chaveiro,Reparos em eletrodomésticos', desc: 'Chaveira 24h e conserto de eletrodomésticos. Rápida e honesta.', concl: 27, nota: 4.6, av: 14, bairros: 'Centro,Bela Vista,Sé' },
+  ];
+  for (const p of maisProfs) {
+    await prisma.usuario.create({
+      data: {
+        tipo: 'prestador', nome: p.nome, senhaHash, whatsapp: p.wpp, cidade: 'São Paulo',
+        descricao: p.desc, categorias: p.cats, bairros: p.bairros,
+        servicosConcluidos: p.concl, statusVerificacao: 'APROVADO', notaMedia: p.nota, totalAvaliacoes: p.av,
+      },
+    });
+  }
 
   console.log('🌱 Criando serviços de exemplo...');
   await prisma.servico.create({

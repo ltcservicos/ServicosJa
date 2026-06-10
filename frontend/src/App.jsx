@@ -8,6 +8,7 @@ import { Cadastro } from './pages/Cadastro';
 
 import { ContratanteShell } from './shells/ContratanteShell';
 import { Inicio } from './pages/contratante/Inicio';
+import { Profissionais } from './pages/contratante/Profissionais';
 import { Postar } from './pages/contratante/Postar';
 import { Trabalho } from './pages/contratante/Trabalho';
 import { PerfilTrabalhador } from './pages/contratante/PerfilTrabalhador';
@@ -70,6 +71,7 @@ export default function App() {
             {/* App do CONTRATANTE */}
             <Route path="/contratar" element={<RequireRole tipo="solicitante"><ContratanteShell /></RequireRole>}>
               <Route index element={<Inicio />} />
+              <Route path="profissionais" element={<Profissionais />} />
               <Route path="postar" element={<Postar />} />
               <Route path="trabalho/:id" element={<Trabalho />} />
               <Route path="trabalhador/:id" element={<PerfilTrabalhador />} />

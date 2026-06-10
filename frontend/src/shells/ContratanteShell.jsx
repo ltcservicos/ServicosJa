@@ -44,8 +44,9 @@ export function ContratanteShell() {
         <Tabbar
           tabs={[
             { to: '/contratar', end: true, label: 'Início', icon: <Icon.Home /> },
+            { to: '/contratar/profissionais', label: 'Buscar', icon: <Icon.Search /> },
             { to: '/contratar/postar', label: 'Postar', icon: <Icon.Plus /> },
-            { to: '/contratar/conversas', label: 'Conversas', icon: <Icon.Chat />, badge: chatBadge },
+            { to: '/contratar/conversas', label: 'Chat', icon: <Icon.Chat />, badge: chatBadge },
             { to: '/contratar/perfil', label: 'Perfil', icon: <Icon.User /> },
           ]}
         />

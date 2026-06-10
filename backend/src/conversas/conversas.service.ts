@@ -95,14 +95,17 @@ export class ConversasService {
       status: full!.status,
       criadoEm: full!.criadoEm,
       souContratante,
+      assunto: full!.assunto,
       outraParte: this._serializeParte(souContratante ? full!.trabalhador : full!.contratante),
-      servico: {
-        id: full!.servico.id,
-        titulo: full!.servico.titulo,
-        estado: full!.servico.estado,
-        fotos: full!.servico.fotos.split('|||').filter(Boolean),
-        prestadorAceitoId: full!.servico.prestadorAceitoId,
-      },
+      servico: full!.servico
+        ? {
+            id: full!.servico.id,
+            titulo: full!.servico.titulo,
+            estado: full!.servico.estado,
+            fotos: full!.servico.fotos.split('|||').filter(Boolean),
+            prestadorAceitoId: full!.servico.prestadorAceitoId,
+          }
+        : null,
     };
   }
 
@@ -138,13 +141,16 @@ export class ConversasService {
         id: c.id,
         status: c.status,
         souContratante,
+        assunto: c.assunto,
         outraParte: this._serializeParte(souContratante ? c.trabalhador : c.contratante),
-        servico: {
-          id: c.servico.id,
-          titulo: c.servico.titulo,
-          estado: c.servico.estado,
-          fotos: c.servico.fotos.split('|||').filter(Boolean),
-        },
+        servico: c.servico
+          ? {
+              id: c.servico.id,
+              titulo: c.servico.titulo,
+              estado: c.servico.estado,
+              fotos: c.servico.fotos.split('|||').filter(Boolean),
+            }
+          : null,
         ultimaMensagem: ultima
           ? { texto: ultima.texto, criadoEm: ultima.criadoEm, minha: ultima.autorId === userId }
           : null,
