@@ -8,7 +8,7 @@ export function Entrar() {
   const { login } = useSession();
   const toast = useToast();
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [loginStr, setLoginStr] = useState('');
   const [senha, setSenha] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export function Entrar() {
     e.preventDefault();
     setLoading(true);
     try {
-      const u = await login(email.trim(), senha);
+      const u = await login(loginStr.trim(), senha);
       navigate(u.tipo === 'solicitante' ? '/contratar' : '/trabalhar', { replace: true });
     } catch (err) {
       toast(err.message, 'error');
@@ -29,7 +29,7 @@ export function Entrar() {
     <div className="app-shell" style={{ '--accent': '#D6FF3A', '--accent-text': '#0E0E10' }}>
       <Header onBack={() => navigate('/')} title="Entrar" sub="Bom te ver de novo!" />
       <form onSubmit={submit} className="flex-1 px-6 pt-4 flex flex-col gap-4">
-        <Input label="Seu e-mail" type="email" value={email} onChange={setEmail} placeholder="exemplo@email.com" required autoComplete="email" />
+        <Input label="Seu WhatsApp" value={loginStr} onChange={setLoginStr} placeholder="Com DDD. Ex: 11 99999-9999" required inputMode="tel" autoComplete="tel" />
         <Input label="Sua senha" type="password" value={senha} onChange={setSenha} placeholder="••••" required autoComplete="current-password" />
         <div className="pt-2">
           <Button type="submit" disabled={loading}>

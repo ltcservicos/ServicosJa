@@ -22,8 +22,8 @@ export function SessionProvider({ children }) {
     })();
   }, []);
 
-  const login = useCallback(async (email, senha) => {
-    const r = await api.login({ email, senha });
+  const login = useCallback(async (loginStr, senha) => {
+    const r = await api.login({ login: loginStr, senha });
     api.setToken(r.token);
     setUser(r.user);
     return r.user;

@@ -15,9 +15,9 @@ model Usuario {
   id           String   @id @default(uuid())
   tipo         String   // "solicitante" | "prestador"
   nome         String
-  email        String   @unique
+  email        String?  @unique // opcional — o login principal é o WhatsApp
   senhaHash    String
-  whatsapp     String
+  whatsapp     String   @unique
   cidade       String
   cep          String?
   estado       String?

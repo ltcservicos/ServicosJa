@@ -21,7 +21,6 @@ export function Cadastro() {
   const [nome, setNome] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [cidade, setCidade] = useState('');
-  const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -37,7 +36,6 @@ export function Cadastro() {
         nome: nome.trim(),
         whatsapp: whatsapp.replace(/\D/g, ''),
         cidade: cidade.trim(),
-        email: email.trim(),
         senha,
         ...extra,
       });
@@ -74,9 +72,8 @@ export function Cadastro() {
       {step === 1 ? (
         <form onSubmit={handleStep1} className="flex-1 overflow-y-auto no-scrollbar px-6 pt-2 pb-8 flex flex-col gap-4">
           <Input label="Seu nome" value={nome} onChange={setNome} placeholder="Como te chamam?" required autoComplete="name" />
-          <Input label="Seu WhatsApp" value={whatsapp} onChange={setWhatsapp} placeholder="Com DDD. Ex: 11 99999-9999" required inputMode="tel" autoComplete="tel" />
+          <Input label="Seu WhatsApp (vai ser seu login)" value={whatsapp} onChange={setWhatsapp} placeholder="Com DDD. Ex: 11 99999-9999" required inputMode="tel" autoComplete="tel" />
           <Input label="Sua cidade" value={cidade} onChange={setCidade} placeholder="Ex: São Paulo" required />
-          <Input label="Seu e-mail" type="email" value={email} onChange={setEmail} placeholder="exemplo@email.com" required autoComplete="email" />
           <Input label="Crie uma senha" type="password" value={senha} onChange={setSenha} placeholder="Mínimo de 4 caracteres" required autoComplete="new-password" />
           <div className="pt-2">
             <Button type="submit" disabled={loading}>

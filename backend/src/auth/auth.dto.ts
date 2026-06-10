@@ -7,8 +7,9 @@ export class SignupDto {
   @IsString()
   nome: string;
 
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 
   @IsString()
   @MinLength(4)
@@ -58,8 +59,9 @@ export class SignupDto {
 }
 
 export class LoginDto {
-  @IsEmail()
-  email: string;
+  // WhatsApp (com ou sem formatação) ou e-mail
+  @IsString()
+  login: string;
 
   @IsString()
   senha: string;

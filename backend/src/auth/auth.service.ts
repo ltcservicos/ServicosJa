@@ -11,9 +11,24 @@ export class AuthService {
     private jwt: JwtService,
   ) {}
 
+  // Guarda só os dígitos do WhatsApp — vira a chave de login
+  private _normalizaWpp(n: string) {
+    return (n || '').replace(/\D/g, '');
+  }
+
   async signup(dto: SignupDto) {
-    const existing = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
-    if (existing) throw new BadRequestException('E-mail já cadastrado');
+    const whatsapp = this._normalizaWpp(dto.whatsapp);
+    if (whatsapp.length < 10) {
+      throw new BadRequestException('WhatsApp inválido. Use o número com DDD.');
+    }
+
+    const jaTemWpp = await this.prisma.usuario.findUnique({ where: { whatsapp } });
+    if (jaTemWpp) throw new BadRequestException('Este WhatsApp já tem conta. Toque em "Entrar".');
+
+    if (dto.email) {
+      const jaTemEmail = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
+      if (jaTemEmail) throw new BadRequestException('E-mail já cadastrado');
+    }
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
 
@@ -21,9 +36,9 @@ export class AuthService {
       data: {
         tipo: dto.tipo,
         nome: dto.nome,
-        email: dto.email,
+        email: dto.email || null,
         senhaHash,
-        whatsapp: dto.whatsapp,
+        whatsapp,
         cidade: dto.cidade,
         cep: dto.cep,
         estado: dto.estado,
@@ -43,11 +58,26 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.usuario.findUnique({ where: { email: dto.email } });
-    if (!user) throw new UnauthorizedException('Credenciais inválidas');
+    // Aceita WhatsApp (qualquer formatação, com ou sem o 55 do Brasil) ou e-mail
+    const digits = this._normalizaWpp(dto.login);
+    let user = null;
+    if (digits.length >= 10) {
+      const candidatos = [...new Set([
+        digits,
+        `55${digits}`,
+        digits.startsWith('55') ? digits.slice(2) : '',
+      ])].filter((c) => c.length >= 10);
+      for (const c of candidatos) {
+        user = await this.prisma.usuario.findUnique({ where: { whatsapp: c } });
+        if (user) break;
+      }
+    } else {
+      user = await this.prisma.usuario.findUnique({ where: { email: dto.login.trim() } });
+    }
+    if (!user) throw new UnauthorizedException('WhatsApp ou senha errados. Confira e tente de novo.');
 
     const ok = await bcrypt.compare(dto.senha, user.senhaHash);
-    if (!ok) throw new UnauthorizedException('Credenciais inválidas');
+    if (!ok) throw new UnauthorizedException('WhatsApp ou senha errados. Confira e tente de novo.');
 
     return this._withToken(user);
   }

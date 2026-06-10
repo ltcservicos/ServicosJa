@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useSession } from '../../context/SessionContext';
 import { Header, SectionTitle, StatCard, Button, Stars } from '../../components/UI';
-import { initials } from '../../lib/helpers';
+import { initials, formatWpp } from '../../lib/helpers';
 
 export function PerfilContratante() {
   const { user, logout } = useSession();
@@ -30,7 +30,7 @@ export function PerfilContratante() {
 
   return (
     <>
-      <Header title="Meu perfil" sub={user.email} />
+      <Header title="Meu perfil" sub={`📱 ${formatWpp(user.whatsapp)}`} />
       <div className="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">
         <div className="h-[110px] -mx-5" style={{ background: 'linear-gradient(135deg, var(--accent), #60A5FA)' }} />
         <div className="flex items-end -mt-[44px] pl-1.5">

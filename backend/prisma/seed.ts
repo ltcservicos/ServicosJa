@@ -22,7 +22,7 @@ async function main() {
       nome: 'Maria Costa',
       email: 'maria@demo.com',
       senhaHash,
-      whatsapp: '+5511988880001',
+      whatsapp: '5511988880001',
       cidade: 'São Paulo',
       statusVerificacao: 'APROVADO',
       notaMedia: 4.7,
@@ -36,7 +36,7 @@ async function main() {
       nome: 'João Pereira',
       email: 'joao@demo.com',
       senhaHash,
-      whatsapp: '+5511988880002',
+      whatsapp: '5511988880002',
       cidade: 'São Paulo',
       descricao:
         'Eletricista e encanador autônomo com mais de 10 anos de experiência. Atendo emergências.',
@@ -55,7 +55,7 @@ async function main() {
       nome: 'Carlos Lima',
       email: 'carlos@demo.com',
       senhaHash,
-      whatsapp: '+5511988880003',
+      whatsapp: '5511988880003',
       cidade: 'São Paulo',
       descricao: 'Pintor e marceneiro. Orçamento sem compromisso, pontualidade garantida.',
       categorias:
