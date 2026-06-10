@@ -31,6 +31,8 @@ model Usuario {
   bairros      String?  // ex: "Pinheiros,Vila Madalena"
   servicosConcluidos  Int    @default(0)
   statusVerificacao   String @default("PENDENTE") // PENDENTE | EM_REVISAO | APROVADO | REPROVADO
+  notaMedia           Float  @default(0)
+  totalAvaliacoes     Int    @default(0)
   criadoEm     DateTime @default(now())
   ativo        Boolean  @default(true)
 
@@ -38,6 +40,11 @@ model Usuario {
   servicosComoPrestador   Servico[] @relation("ServicoPrestador")
   acoes                   AcaoServico[]
   notificacoes            Notificacao[]
+  conversasComoContratante Conversa[] @relation("ConversaContratante")
+  conversasComoTrabalhador Conversa[] @relation("ConversaTrabalhador")
+  mensagens               Mensagem[]
+  avaliacoesFeitas        Avaliacao[] @relation("AvaliacaoAutor")
+  avaliacoesRecebidas     Avaliacao[] @relation("AvaliacaoAlvo")
 }
 
 // === SERVIÇO ===
@@ -61,6 +68,8 @@ model Servico {
 
   acoes        AcaoServico[]
   notificacoes Notificacao[]
+  conversas    Conversa[]
+  avaliacoes   Avaliacao[]
 
   @@index([estado])
   @@index([solicitanteId])
@@ -98,4 +107,57 @@ model Notificacao {
   servico Servico? @relation(fields: [servicoId], references: [id])
 
   @@index([usuarioId, lida])
+}
+
+// === CONVERSA (chat entre contratante e trabalhador interessado) ===
+model Conversa {
+  id            String   @id @default(uuid())
+  servicoId     String
+  contratanteId String
+  trabalhadorId String
+  status        String   @default("ABERTA") // ABERTA | FECHADA
+  criadoEm      DateTime @default(now())
+  atualizadoEm  DateTime @updatedAt
+
+  servico     Servico @relation(fields: [servicoId], references: [id])
+  contratante Usuario @relation("ConversaContratante", fields: [contratanteId], references: [id])
+  trabalhador Usuario @relation("ConversaTrabalhador", fields: [trabalhadorId], references: [id])
+  mensagens   Mensagem[]
+
+  @@unique([servicoId, trabalhadorId])
+  @@index([contratanteId])
+  @@index([trabalhadorId])
+}
+
+// === MENSAGEM ===
+model Mensagem {
+  id         String   @id @default(uuid())
+  conversaId String
+  autorId    String
+  texto      String
+  lida       Boolean  @default(false)
+  criadoEm   DateTime @default(now())
+
+  conversa Conversa @relation(fields: [conversaId], references: [id])
+  autor    Usuario  @relation(fields: [autorId], references: [id])
+
+  @@index([conversaId, criadoEm])
+}
+
+// === AVALIAÇÃO (1 por avaliador por serviço concluído) ===
+model Avaliacao {
+  id          String   @id @default(uuid())
+  servicoId   String
+  avaliadorId String
+  avaliadoId  String
+  nota        Int      // 1..5
+  comentario  String?
+  criadoEm    DateTime @default(now())
+
+  servico   Servico @relation(fields: [servicoId], references: [id])
+  avaliador Usuario @relation("AvaliacaoAutor", fields: [avaliadorId], references: [id])
+  avaliado  Usuario @relation("AvaliacaoAlvo", fields: [avaliadoId], references: [id])
+
+  @@unique([servicoId, avaliadorId])
+  @@index([avaliadoId])
 }

@@ -147,19 +147,52 @@ export class ServicosService {
         include: { prestador: true },
         orderBy: { criadoEm: 'asc' },
       });
+      // Conversas já abertas com cada interessado
+      const conversas = await this.prisma.conversa.findMany({
+        where: { servicoId: id },
+        select: { id: true, trabalhadorId: true },
+      });
+      const convMap: Record<string, string> = {};
+      conversas.forEach(c => { convMap[c.trabalhadorId] = c.id; });
+
       aceitesList = acoes.map(a => ({
         prestador: this._serializeUser(a.prestador, false),
         valorProposto: a.valorProposto,
         acaoId: a.id,
         criadoEm: a.criadoEm,
+        conversaId: convMap[a.prestadorId] || null,
       }));
     }
+
+    // Conversa do viewer neste serviço (para atalho "Conversar")
+    let minhaConversaId: string | null = null;
+    if (s.solicitanteId !== viewerId) {
+      const c = await this.prisma.conversa.findUnique({
+        where: { servicoId_trabalhadorId: { servicoId: id, trabalhadorId: viewerId } },
+        select: { id: true },
+      });
+      minhaConversaId = c?.id || null;
+    } else if (s.prestadorAceitoId) {
+      const c = await this.prisma.conversa.findUnique({
+        where: { servicoId_trabalhadorId: { servicoId: id, trabalhadorId: s.prestadorAceitoId } },
+        select: { id: true },
+      });
+      minhaConversaId = c?.id || null;
+    }
+
+    // Avaliação que o viewer já fez neste serviço
+    const minhaAvaliacao = await this.prisma.avaliacao.findUnique({
+      where: { servicoId_avaliadorId: { servicoId: id, avaliadorId: viewerId } },
+      select: { nota: true, comentario: true },
+    });
 
     return {
       ...this._serializeServico(s),
       prestadorAceito: s.prestadorAceito ? this._serializeUser(s.prestadorAceito, wppRevelado) : null,
       aceites: aceitesList,
       meuValorProposto: acaoViewer?.valorProposto ?? null,
+      minhaConversaId,
+      minhaAvaliacao,
     };
   }
 
@@ -199,6 +232,11 @@ export class ServicosService {
           data: { servicoId, prestadorId: o.prestadorId, acao: 'RECUSADO_PELO_CLIENTE' },
         })
       ),
+      // Fecha as conversas com os trabalhadores não escolhidos
+      this.prisma.conversa.updateMany({
+        where: { servicoId, trabalhadorId: { not: dto.prestadorId } },
+        data: { status: 'FECHADA' },
+      }),
     ]);
 
     await this._notify(dto.prestadorId, {
@@ -237,7 +275,57 @@ export class ServicosService {
         where: { id: s.prestadorAceitoId! },
         data: { servicosConcluidos: { increment: 1 } },
       }),
+      this.prisma.conversa.updateMany({
+        where: { servicoId },
+        data: { status: 'FECHADA' },
+      }),
     ]);
+
+    await this._notify(s.prestadorAceitoId!, {
+      tipo: 'CONCLUIDO',
+      titulo: '✅ Trabalho concluído!',
+      mensagem: 'O contratante marcou o trabalho como concluído. Parabéns!',
+      servicoId,
+    });
+
+    return { ok: true };
+  }
+
+  // ---------------- avaliação (qualquer uma das partes, após concluído) ----------------
+  async avaliar(servicoId: string, avaliadorId: string, nota: number, comentario?: string) {
+    const s = await this.prisma.servico.findUnique({ where: { id: servicoId } });
+    if (!s) throw new NotFoundException('Trabalho não encontrado');
+    if (s.estado !== ESTADO.CONCLUIDO) {
+      throw new BadRequestException('Só é possível avaliar um trabalho concluído');
+    }
+
+    let avaliadoId: string;
+    if (avaliadorId === s.solicitanteId) avaliadoId = s.prestadorAceitoId!;
+    else if (avaliadorId === s.prestadorAceitoId) avaliadoId = s.solicitanteId;
+    else throw new ForbiddenException('Você não participou deste trabalho');
+
+    const existente = await this.prisma.avaliacao.findUnique({
+      where: { servicoId_avaliadorId: { servicoId, avaliadorId } },
+    });
+    if (existente) throw new ConflictException('Você já avaliou este trabalho');
+
+    await this.prisma.avaliacao.create({
+      data: { servicoId, avaliadorId, avaliadoId, nota, comentario },
+    });
+
+    // Recalcula a média do avaliado
+    const agg = await this.prisma.avaliacao.aggregate({
+      where: { avaliadoId },
+      _avg: { nota: true },
+      _count: { id: true },
+    });
+    await this.prisma.usuario.update({
+      where: { id: avaliadoId },
+      data: {
+        notaMedia: Math.round((agg._avg.nota || 0) * 10) / 10,
+        totalAvaliacoes: agg._count.id,
+      },
+    });
 
     return { ok: true };
   }
@@ -249,10 +337,16 @@ export class ServicosService {
     if (![ESTADO.ABERTO].includes(s.estado)) {
       throw new BadRequestException('Não é possível cancelar nesse estado');
     }
-    await this.prisma.servico.update({
-      where: { id: servicoId },
-      data: { estado: ESTADO.CANCELADO },
-    });
+    await this.prisma.$transaction([
+      this.prisma.servico.update({
+        where: { id: servicoId },
+        data: { estado: ESTADO.CANCELADO },
+      }),
+      this.prisma.conversa.updateMany({
+        where: { servicoId },
+        data: { status: 'FECHADA' },
+      }),
+    ]);
     return { ok: true };
   }
 
@@ -274,6 +368,8 @@ export class ServicosService {
       where: {
         estado: ESTADO.ABERTO,
         id: { notIn: bloqueados },
+        // Só trabalhos das categorias (segmento) do trabalhador
+        ...(categorias.length > 0 && { categoria: { in: categorias } }),
       },
       orderBy: { criadoEm: 'desc' },
     });

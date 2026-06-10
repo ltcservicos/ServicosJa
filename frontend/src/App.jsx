@@ -1,25 +1,97 @@
-import { SessionProvider } from './context/SessionContext';
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './context/ToastContext';
-import { SolicitanteApp } from './pages/SolicitanteApp';
-import { PrestadorApp } from './pages/PrestadorApp';
+
+import { Landing } from './pages/Landing';
+import { Entrar } from './pages/Entrar';
+import { Cadastro } from './pages/Cadastro';
+
+import { ContratanteShell } from './shells/ContratanteShell';
+import { Inicio } from './pages/contratante/Inicio';
+import { Postar } from './pages/contratante/Postar';
+import { Trabalho } from './pages/contratante/Trabalho';
+import { PerfilTrabalhador } from './pages/contratante/PerfilTrabalhador';
+import { PerfilContratante } from './pages/contratante/Perfil';
+
+import { TrabalhadorShell } from './shells/TrabalhadorShell';
+import { Explorar } from './pages/trabalhador/Explorar';
+import { Interesses } from './pages/trabalhador/Interesses';
+import { Interesse } from './pages/trabalhador/Interesse';
+import { PerfilTrab } from './pages/trabalhador/Perfil';
+
+import { Conversas } from './pages/chat/Conversas';
+import { Chat } from './pages/chat/Chat';
+import { Avisos } from './pages/Avisos';
+
+function Splash() {
+  return (
+    <div className="app-shell items-center justify-center">
+      <div className="font-display text-3xl font-extrabold animate-pulse">
+        Serviço<span className="text-accent">Já.</span>
+      </div>
+    </div>
+  );
+}
+
+// Protege rotas por papel; manda cada um para o lugar certo
+function RequireRole({ tipo, children }) {
+  const { user, loading } = useSession();
+  const location = useLocation();
+  if (loading) return <Splash />;
+  if (!user) return <Navigate to="/" state={{ from: location }} replace />;
+  if (user.tipo !== tipo) {
+    return <Navigate to={user.tipo === 'solicitante' ? '/contratar' : '/trabalhar'} replace />;
+  }
+  return children;
+}
+
+// Se já está logado, pula a landing
+function PublicOnly({ children }) {
+  const { user, loading } = useSession();
+  if (loading) return <Splash />;
+  if (user) {
+    return <Navigate to={user.tipo === 'solicitante' ? '/contratar' : '/trabalhar'} replace />;
+  }
+  return children;
+}
 
 export default function App() {
   return (
-    <ToastProvider>
-      <SessionProvider>
-        <div className="stage flex gap-8 items-center justify-center w-full h-full p-6">
-          <SolicitanteApp />
-          <PrestadorApp />
-        </div>
+    <BrowserRouter>
+      <ToastProvider>
+        <SessionProvider>
+          <Routes>
+            <Route path="/" element={<PublicOnly><Landing /></PublicOnly>} />
+            <Route path="/entrar" element={<PublicOnly><Entrar /></PublicOnly>} />
+            <Route path="/cadastro" element={<PublicOnly><Cadastro /></PublicOnly>} />
 
-        <div className="fixed top-5 left-5 bg-bg-soft/85 backdrop-blur-md border border-border rounded-2xl px-4 py-3.5 text-[11px] text-text-dim max-w-[260px] leading-relaxed z-[9000]">
-          <div className="font-display font-semibold text-[13px] text-text-main mb-1">ServiçoJá — Demo</div>
-          Dois apps lado a lado: <code className="bg-surface-2 px-1 py-0.5 rounded text-[10px] text-accent">Solicitante</code> e <code className="bg-surface-2 px-1 py-0.5 rounded text-[10px] text-accent">Prestador</code>.
-          <div className="mt-2 text-text-mute">
-            Logins: <code className="bg-surface-2 px-1 py-0.5 rounded text-[10px]">maria@demo.com</code>, <code className="bg-surface-2 px-1 py-0.5 rounded text-[10px]">joao@demo.com</code> / senha <code className="bg-surface-2 px-1 py-0.5 rounded text-[10px]">demo</code>
-          </div>
-        </div>
-      </SessionProvider>
-    </ToastProvider>
+            {/* App do CONTRATANTE */}
+            <Route path="/contratar" element={<RequireRole tipo="solicitante"><ContratanteShell /></RequireRole>}>
+              <Route index element={<Inicio />} />
+              <Route path="postar" element={<Postar />} />
+              <Route path="trabalho/:id" element={<Trabalho />} />
+              <Route path="trabalhador/:id" element={<PerfilTrabalhador />} />
+              <Route path="conversas" element={<Conversas />} />
+              <Route path="conversa/:id" element={<Chat />} />
+              <Route path="avisos" element={<Avisos />} />
+              <Route path="perfil" element={<PerfilContratante />} />
+            </Route>
+
+            {/* App do TRABALHADOR */}
+            <Route path="/trabalhar" element={<RequireRole tipo="prestador"><TrabalhadorShell /></RequireRole>}>
+              <Route index element={<Explorar />} />
+              <Route path="interesses" element={<Interesses />} />
+              <Route path="interesse/:id" element={<Interesse />} />
+              <Route path="conversas" element={<Conversas />} />
+              <Route path="conversa/:id" element={<Chat />} />
+              <Route path="avisos" element={<Avisos />} />
+              <Route path="perfil" element={<PerfilTrab />} />
+            </Route>
+
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </SessionProvider>
+      </ToastProvider>
+    </BrowserRouter>
   );
 }

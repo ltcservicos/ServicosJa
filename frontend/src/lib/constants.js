@@ -1,15 +1,22 @@
+// Categorias com ícone — público simples entende ícone + texto juntos
 export const CATEGORIAS = [
-  'Encanamento e hidráulica',
-  'Elétrica',
-  'Pintura',
-  'Reparos em eletrodomésticos',
-  'Pedreiro e reformas pequenas',
-  'Marcenaria e montagem de móveis',
-  'Limpeza pesada',
-  'Jardinagem',
-  'Chaveiro',
-  'Ar-condicionado e refrigeração',
+  { nome: 'Encanamento e hidráulica', icone: '🚰', curto: 'Encanamento' },
+  { nome: 'Elétrica', icone: '💡', curto: 'Elétrica' },
+  { nome: 'Pintura', icone: '🎨', curto: 'Pintura' },
+  { nome: 'Reparos em eletrodomésticos', icone: '🔌', curto: 'Eletrodomésticos' },
+  { nome: 'Pedreiro e reformas pequenas', icone: '🧱', curto: 'Pedreiro' },
+  { nome: 'Marcenaria e montagem de móveis', icone: '🪑', curto: 'Móveis' },
+  { nome: 'Limpeza pesada', icone: '🧹', curto: 'Limpeza' },
+  { nome: 'Jardinagem', icone: '🌿', curto: 'Jardim' },
+  { nome: 'Chaveiro', icone: '🔑', curto: 'Chaveiro' },
+  { nome: 'Ar-condicionado e refrigeração', icone: '❄️', curto: 'Ar-condicionado' },
 ];
+
+export const catIcone = (nome) =>
+  CATEGORIAS.find((c) => c.nome === nome)?.icone || '🛠️';
+
+export const catCurto = (nome) =>
+  CATEGORIAS.find((c) => c.nome === nome)?.curto || nome;
 
 export const DEFAULT_PHOTOS = {
   'Encanamento e hidráulica': 'https://images.unsplash.com/photo-1542013936693-884638332954?w=800&q=80',
@@ -23,3 +30,6 @@ export const DEFAULT_PHOTOS = {
   'Chaveiro': 'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=800&q=80',
   'Ar-condicionado e refrigeração': 'https://images.unsplash.com/photo-1585104555336-4d4d10a59850?w=800&q=80',
 };
+
+export const fotoDefault = (categoria) =>
+  DEFAULT_PHOTOS[categoria] || DEFAULT_PHOTOS['Encanamento e hidráulica'];

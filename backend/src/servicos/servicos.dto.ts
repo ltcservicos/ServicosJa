@@ -57,9 +57,21 @@ export class EditarServicoDto {
 }
 
 export class AceitarServicoDto {
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  valorProposto: number;
+  valorProposto?: number;
+}
+
+export class AvaliarServicoDto {
+  @IsNumber()
+  @Min(1)
+  nota: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  comentario?: string;
 }
 
 export class AprovarPrestadorDto {

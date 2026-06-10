@@ -34,6 +34,8 @@ export class AuthService {
         foto: dto.foto || null,
         categorias: dto.categorias?.join(',') || null,
         bairros: dto.bairros?.join(',') || null,
+        // MVP: aprovação automática; trocar por fluxo de verificação real depois
+        statusVerificacao: 'APROVADO',
       },
     });
 

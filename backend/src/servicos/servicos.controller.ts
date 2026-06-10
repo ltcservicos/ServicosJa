@@ -2,7 +2,7 @@ import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/co
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
 import { ServicosService } from './servicos.service';
-import { AceitarServicoDto, AprovarPrestadorDto, CreateServicoDto, EditarServicoDto } from './servicos.dto';
+import { AceitarServicoDto, AprovarPrestadorDto, AvaliarServicoDto, CreateServicoDto, EditarServicoDto } from './servicos.dto';
 
 @Controller()
 @UseGuards(JwtAuthGuard)
@@ -43,6 +43,11 @@ export class ServicosController {
   @Post('servicos/:id/cancelar')
   cancelar(@Param('id') id: string, @CurrentUser() u: AuthUser) {
     return this.servicos.cancelar(id, u.id);
+  }
+
+  @Post('servicos/:id/avaliar')
+  avaliar(@Param('id') id: string, @Body() dto: AvaliarServicoDto, @CurrentUser() u: AuthUser) {
+    return this.servicos.avaliar(id, u.id, dto.nota, dto.comentario);
   }
 
   // --- Prestador ---

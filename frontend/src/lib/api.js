@@ -1,20 +1,15 @@
-// Cliente HTTP simples que conversa com o backend NestJS
-// Em produção, troque o baseURL pelo seu domínio
-
+// Cliente HTTP único — o papel (contratante/trabalhador) vem do usuário logado
 const API_BASE = '/api';
+const TOKEN_KEY = 'servicoja_token';
 
 class ApiClient {
-  constructor(storageKey) {
-    this.storageKey = storageKey; // 'token_solicitante' ou 'token_prestador'
-  }
-
   getToken() {
-    return localStorage.getItem(this.storageKey);
+    return localStorage.getItem(TOKEN_KEY);
   }
 
   setToken(token) {
-    if (token) localStorage.setItem(this.storageKey, token);
-    else localStorage.removeItem(this.storageKey);
+    if (token) localStorage.setItem(TOKEN_KEY, token);
+    else localStorage.removeItem(TOKEN_KEY);
   }
 
   async request(method, path, body) {
@@ -29,7 +24,7 @@ class ApiClient {
     });
 
     if (!res.ok) {
-      let msg = 'Erro na requisição';
+      let msg = 'Algo deu errado. Tente de novo.';
       try {
         const j = await res.json();
         msg = j.message || msg;
@@ -46,30 +41,36 @@ class ApiClient {
   login(data)  { return this.request('POST', '/auth/login', data); }
 
   // === USERS ===
-  me()                              { return this.request('GET', '/me'); }
-  getPrestador(id)                  { return this.request('GET', `/prestadores/${id}`); }
+  me()                { return this.request('GET', '/me'); }
+  getTrabalhador(id)  { return this.request('GET', `/prestadores/${id}`); }
 
-  // === SOLICITANTE ===
-  publicarServico(data)             { return this.request('POST', '/servicos', data); }
-  meusServicos()                    { return this.request('GET', '/servicos/meus'); }
-  getServico(id)                    { return this.request('GET', `/servicos/${id}`); }
-  aprovarPrestador(id)              { return this.request('POST', `/servicos/${id}/aprovar`); }
-  recusarPrestador(id, motivo)      { return this.request('POST', `/servicos/${id}/recusar`, { motivo }); }
-  concluirServico(id)               { return this.request('POST', `/servicos/${id}/concluir`); }
-  cancelarServico(id)               { return this.request('POST', `/servicos/${id}/cancelar`); }
+  // === CONTRATANTE ===
+  publicarTrabalho(data)         { return this.request('POST', '/servicos', data); }
+  meusTrabalhos()                { return this.request('GET', '/servicos/meus'); }
+  getTrabalho(id)                { return this.request('GET', `/servicos/${id}`); }
+  escolherTrabalhador(id, prestadorId) { return this.request('POST', `/servicos/${id}/aprovar`, { prestadorId }); }
+  concluirTrabalho(id)           { return this.request('POST', `/servicos/${id}/concluir`); }
+  cancelarTrabalho(id)           { return this.request('POST', `/servicos/${id}/cancelar`); }
+  avaliarTrabalho(id, nota, comentario) { return this.request('POST', `/servicos/${id}/avaliar`, { nota, comentario }); }
 
-  // === PRESTADOR ===
-  feed()                            { return this.request('GET', '/feed'); }
-  aceitarServico(id)                { return this.request('POST', `/feed/${id}/aceitar`); }
-  recusarServicoSwipe(id)           { return this.request('POST', `/feed/${id}/recusar`); }
-  meusAceites()                     { return this.request('GET', '/aceites/meus'); }
+  // === TRABALHADOR ===
+  feed()                  { return this.request('GET', '/feed'); }
+  curtirTrabalho(id)      { return this.request('POST', `/feed/${id}/aceitar`, {}); }
+  pularTrabalho(id)       { return this.request('POST', `/feed/${id}/recusar`); }
+  meusInteresses()        { return this.request('GET', '/aceites/meus'); }
 
-  // === NOTIF ===
-  notificacoes()                    { return this.request('GET', '/notificacoes'); }
-  notifUnread()                     { return this.request('GET', '/notificacoes/unread-count'); }
-  notifMarcarLida(id)               { return this.request('POST', `/notificacoes/${id}/lida`); }
-  notifMarcarTodasLidas()           { return this.request('POST', '/notificacoes/todas-lidas'); }
+  // === CONVERSAS (chat) ===
+  abrirConversa(servicoId, trabalhadorId) { return this.request('POST', '/conversas', { servicoId, trabalhadorId }); }
+  conversas()             { return this.request('GET', '/conversas'); }
+  conversasUnread()       { return this.request('GET', '/conversas/unread-count'); }
+  getConversa(id)         { return this.request('GET', `/conversas/${id}`); }
+  mensagens(id, after)    { return this.request('GET', `/conversas/${id}/mensagens${after ? `?after=${encodeURIComponent(after)}` : ''}`); }
+  enviarMensagem(id, texto) { return this.request('POST', `/conversas/${id}/mensagens`, { texto }); }
+
+  // === NOTIFICAÇÕES ===
+  notificacoes()          { return this.request('GET', '/notificacoes'); }
+  notifUnread()           { return this.request('GET', '/notificacoes/unread-count'); }
+  notifMarcarTodasLidas() { return this.request('POST', '/notificacoes/todas-lidas'); }
 }
 
-export const apiSolicitante = new ApiClient('token_solicitante');
-export const apiPrestador = new ApiClient('token_prestador');
+export const api = new ApiClient();

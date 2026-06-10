@@ -5,6 +5,9 @@ const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Limpando banco...');
+  await prisma.mensagem.deleteMany();
+  await prisma.conversa.deleteMany();
+  await prisma.avaliacao.deleteMany();
   await prisma.notificacao.deleteMany();
   await prisma.acaoServico.deleteMany();
   await prisma.servico.deleteMany();
@@ -21,6 +24,9 @@ async function main() {
       senhaHash,
       whatsapp: '+5511988880001',
       cidade: 'São Paulo',
+      statusVerificacao: 'APROVADO',
+      notaMedia: 4.7,
+      totalAvaliacoes: 12,
     },
   });
 
@@ -37,6 +43,9 @@ async function main() {
       categorias: 'Encanamento e hidráulica,Elétrica,Reparos em eletrodomésticos',
       bairros: 'Pinheiros,Vila Madalena,Itaim Bibi,Jardins,Moema',
       servicosConcluidos: 28,
+      statusVerificacao: 'APROVADO',
+      notaMedia: 4.8,
+      totalAvaliacoes: 23,
     },
   });
 
@@ -53,6 +62,9 @@ async function main() {
         'Pintura,Marcenaria e montagem de móveis,Pedreiro e reformas pequenas',
       bairros: 'Pinheiros,Vila Madalena,Perdizes,Lapa',
       servicosConcluidos: 41,
+      statusVerificacao: 'APROVADO',
+      notaMedia: 4.9,
+      totalAvaliacoes: 35,
     },
   });
 
