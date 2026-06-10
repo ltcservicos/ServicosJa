@@ -79,6 +79,8 @@ async function main() {
       fotos: 'https://images.unsplash.com/photo-1542013936693-884638332954?w=800&q=80',
       cidade: 'São Paulo',
       bairro: 'Pinheiros',
+      lat: -23.5617,
+      lng: -46.7022,
       estado: 'ABERTO',
     },
   });
@@ -92,7 +94,9 @@ async function main() {
       categoria: 'Pintura',
       fotos: 'https://images.unsplash.com/photo-1562259929-b4e1fd3aef09?w=800&q=80',
       cidade: 'São Paulo',
-      bairro: 'Pinheiros',
+      bairro: 'Vila Madalena',
+      lat: -23.5535,
+      lng: -46.6916,
       estado: 'ABERTO',
     },
   });

@@ -43,6 +43,41 @@ export class ServicosService {
     });
   }
 
+  // Geocodifica "bairro, cidade" via Nominatim (OpenStreetMap) — grátis, sem chave.
+  // Falhou? O trabalho fica sem coordenada e continua aparecendo nas buscas sem raio.
+  private async _geocode(bairro: string, cidade: string): Promise<{ lat: number; lng: number } | null> {
+    const tentativas = [`${bairro}, ${cidade}, Brasil`, `${cidade}, Brasil`];
+    for (const q of tentativas) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+          { headers: { 'User-Agent': 'ServicoJa/1.0 (marketplace de servicos)' }, signal: ctrl.signal },
+        );
+        clearTimeout(timer);
+        if (!res.ok) continue;
+        const data: any = await res.json();
+        if (data?.[0]?.lat) {
+          return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        }
+      } catch {}
+    }
+    return null;
+  }
+
+  // Distância em km entre dois pontos (haversine)
+  private _distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const rad = (x: number) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = rad(lat2 - lat1);
+    const dLng = rad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
   // ---------------- solicitante: publicar ----------------
   async publicar(solicitanteId: string, dto: CreateServicoDto) {
     const abertos = await this.prisma.servico.count({
@@ -51,6 +86,9 @@ export class ServicosService {
     if (abertos >= 3) {
       throw new BadRequestException('Limite de 3 serviços abertos atingido');
     }
+
+    // Coordenadas para a busca por distância (não bloqueia a publicação se falhar)
+    const coords = await this._geocode(dto.bairro, dto.cidade);
 
     const s = await this.prisma.servico.create({
       data: {
@@ -61,6 +99,8 @@ export class ServicosService {
         fotos: dto.fotos.join('|||'),
         cidade: dto.cidade,
         bairro: dto.bairro,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
         estado: ESTADO.ABERTO,
       },
     });
@@ -350,8 +390,8 @@ export class ServicosService {
     return { ok: true };
   }
 
-  // ---------------- prestador: feed ----------------
-  async getFeed(prestadorId: string) {
+  // ---------------- prestador: feed (com filtro por distância opcional) ----------------
+  async getFeed(prestadorId: string, lat?: number, lng?: number, raioKm?: number) {
     const prestador = await this.prisma.usuario.findUnique({ where: { id: prestadorId } });
     if (!prestador) throw new NotFoundException('Prestador não encontrado');
 
@@ -374,7 +414,29 @@ export class ServicosService {
       orderBy: { criadoEm: 'desc' },
     });
 
-    return servicos.map((s) => this._serializeServico(s));
+    const temPos = typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+
+    let lista = servicos.map((s) => {
+      const distanciaKm =
+        temPos && s.lat != null && s.lng != null
+          ? Math.round(this._distanciaKm(lat!, lng!, s.lat, s.lng) * 10) / 10
+          : null;
+      return { ...this._serializeServico(s), distanciaKm };
+    });
+
+    if (temPos) {
+      // Dentro do raio (quem não tem coordenada continua na lista, no final)
+      if (raioKm && raioKm > 0) {
+        lista = lista.filter((s) => s.distanciaKm === null || s.distanciaKm <= raioKm);
+      }
+      lista.sort((a, b) => {
+        if (a.distanciaKm === null) return 1;
+        if (b.distanciaKm === null) return -1;
+        return a.distanciaKm - b.distanciaKm;
+      });
+    }
+
+    return lista;
   }
 
   // ---------------- prestador: aceitar (múltiplos aceites permitidos) ----------------

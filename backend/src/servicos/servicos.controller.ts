@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AuthUser, CurrentUser } from '../auth/current-user.decorator';
 import { ServicosService } from './servicos.service';
@@ -52,8 +52,18 @@ export class ServicosController {
 
   // --- Prestador ---
   @Get('feed')
-  feed(@CurrentUser() u: AuthUser) {
-    return this.servicos.getFeed(u.id);
+  feed(
+    @CurrentUser() u: AuthUser,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('raioKm') raioKm?: string,
+  ) {
+    return this.servicos.getFeed(
+      u.id,
+      lat !== undefined ? parseFloat(lat) : undefined,
+      lng !== undefined ? parseFloat(lng) : undefined,
+      raioKm !== undefined ? parseFloat(raioKm) : undefined,
+    );
   }
 
   @Post('feed/:id/aceitar')

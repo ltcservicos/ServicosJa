@@ -54,7 +54,14 @@ class ApiClient {
   avaliarTrabalho(id, nota, comentario) { return this.request('POST', `/servicos/${id}/avaliar`, { nota, comentario }); }
 
   // === TRABALHADOR ===
-  feed()                  { return this.request('GET', '/feed'); }
+  feed(pos) {
+    let q = '';
+    if (pos?.lat != null && pos?.lng != null) {
+      q = `?lat=${pos.lat}&lng=${pos.lng}`;
+      if (pos.raioKm) q += `&raioKm=${pos.raioKm}`;
+    }
+    return this.request('GET', `/feed${q}`);
+  }
   curtirTrabalho(id)      { return this.request('POST', `/feed/${id}/aceitar`, {}); }
   pularTrabalho(id)       { return this.request('POST', `/feed/${id}/recusar`); }
   meusInteresses()        { return this.request('GET', '/aceites/meus'); }
