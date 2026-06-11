@@ -27,15 +27,24 @@ const DEMO_JOBS = [
 /* ---- Telefone com a demo do app rodando sozinha (v2) ----
    Realismo: status bar, tabbar do app, mãozinha que arrasta o cartão,
    "digitando…" no chat e tilt 3D suave seguindo o mouse. */
-const SWIPE_MS = 2900;
+const SWIPE_MS = 2700;
+const PICK_MS = 4200;
 const CHAT_MS = 5200;
+
+// Interessados que o contratante vê (com nota e preço proposto)
+const INTERESSADOS = [
+  { ini: 'JP', nome: 'João Pereira', nota: '4,8', trab: 28, preco: 'R$ 150', dist: 'a 1,2 km' },
+  { ini: 'CL', nome: 'Carlos Lima', nota: '4,9', trab: 41, preco: 'R$ 180', dist: 'a 2,4 km' },
+  { ini: 'RS', nome: 'Rafael Dias', nota: '4,7', trab: 19, preco: 'R$ 130', dist: 'a 3,1 km' },
+];
 
 function PhoneDemo() {
   const [phase, setPhase] = useState(0); // 0,1,2 = swipe ; 3 = chat
   const tiltRef = useRef(null);
 
   useEffect(() => {
-    const t = setTimeout(() => setPhase((p) => (p + 1) % 4), phase === 3 ? CHAT_MS : SWIPE_MS);
+    const dur = phase === 3 ? CHAT_MS : phase === 2 ? PICK_MS : SWIPE_MS;
+    const t = setTimeout(() => setPhase((p) => (p + 1) % 4), dur);
     return () => clearTimeout(t);
   }, [phase]);
 
@@ -60,10 +69,12 @@ function PhoneDemo() {
     return () => { zone.removeEventListener('mousemove', onMove); zone.removeEventListener('mouseleave', onLeave); cancelAnimationFrame(raf); };
   }, []);
 
+  const isSwipe = phase <= 1;
+  const isPick = phase === 2;
   const isChat = phase === 3;
-  const job = DEMO_JOBS[phase % 3];
-  const dir = phase % 2 === 0 ? 'yes' : 'no';
-  const nextJob = DEMO_JOBS[(phase + 1) % 3];
+  const job = DEMO_JOBS[phase === 0 ? 0 : 1];
+  const dir = phase === 0 ? 'yes' : 'no';
+  const nextJob = DEMO_JOBS[phase === 0 ? 1 : 2];
 
   return (
     <div className="lp-tilt" ref={tiltRef} aria-hidden="true">
@@ -76,16 +87,26 @@ function PhoneDemo() {
             <span className="lp-status-r"><i className="lp-sig" /><i className="lp-bat" /></span>
           </div>
 
-          {/* topo do app */}
-          <div className="lp-appbar">
-            <div>
-              <div className="lp-appbar-t">Olá, João!</div>
-              <div className="lp-appbar-s">Trabalhos perto de você</div>
+          {/* topo do app (muda conforme a fase) */}
+          {isSwipe && (
+            <div className="lp-appbar">
+              <div>
+                <div className="lp-appbar-t">Olá, João!</div>
+                <div className="lp-appbar-s">Trabalhos perto de você</div>
+              </div>
+              <div className="lp-appbar-dot"><span /></div>
             </div>
-            <div className="lp-appbar-dot"><span /></div>
-          </div>
+          )}
+          {isPick && (
+            <div className="lp-appbar">
+              <div>
+                <div className="lp-appbar-t">🎨 Pintar a parede</div>
+                <div className="lp-appbar-s">🙋 3 interessados — escolha quem chamar</div>
+              </div>
+            </div>
+          )}
 
-          {!isChat ? (
+          {isSwipe && (
             <div className="lp-stage">
               {/* cartão de baixo (espia o próximo) */}
               <div className="lp-card lp-card-behind">
@@ -121,22 +142,48 @@ function PhoneDemo() {
                 <div key={`y${phase}`} className={`lp-act lp-act-yes ${dir === 'yes' ? 'lp-act-pulse' : ''}`}>♥</div>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* FASE: contratante vê os interessados, com preços, e escolhe */}
+          {isPick && (
+            <div className="lp-int" key="int">
+              <div className="lp-int-list">
+                {INTERESSADOS.map((p, idx) => (
+                  <div key={p.ini} className={`lp-int-card lp-int-c${idx} ${idx === 0 ? 'lp-int-chosen' : ''}`}>
+                    <div className="lp-int-av">{p.ini}</div>
+                    <div className="lp-int-info">
+                      <div className="lp-int-name">{p.nome}</div>
+                      <div className="lp-int-meta">⭐ {p.nota} · {p.trab} trabalhos · 📍 {p.dist}</div>
+                    </div>
+                    <div className="lp-int-right">
+                      <div className="lp-int-preco">{p.preco}</div>
+                      <div className="lp-int-btn">Conversar</div>
+                      {idx === 0 && <div className="lp-int-tap">👆</div>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="lp-int-hint">Você decide quem chamar 👆</div>
+            </div>
+          )}
+
+          {/* FASE: chat */}
+          {isChat && (
             <div className="lp-chat" key="chat">
               <div className="lp-chat-head">
-                <div className="lp-chat-av">MC</div>
+                <div className="lp-chat-av">JP</div>
                 <div className="lp-chat-hd">
-                  <div className="lp-chat-name">Maria Costa</div>
-                  <div className="lp-chat-sub">🛠️ Pintar a parede da sala</div>
+                  <div className="lp-chat-name">João Pereira</div>
+                  <div className="lp-chat-sub">🛠️ Pintar a parede da sala · R$ 150</div>
                 </div>
                 <div className="lp-chat-online" />
               </div>
               <div className="lp-bubbles">
-                <div className="lp-bub lp-bub-in lp-typing lp-t1"><i/><i/><i/></div>
-                <div className="lp-bub lp-bub-in lp-d1">Oi João! Pode vir amanhã de manhã? 😊<em>09:12</em></div>
-                <div className="lp-bub lp-bub-out lp-d2">Posso sim! Chego às 9h ✅<em>09:13 ✓✓</em></div>
-                <div className="lp-bub lp-bub-in lp-typing lp-t2"><i/><i/><i/></div>
-                <div className="lp-bub lp-bub-in lp-d3">Combinado! Te espero 🙌<em>09:13</em></div>
+                <div className="lp-bub lp-bub-out lp-typing lp-t1"><i/><i/><i/></div>
+                <div className="lp-bub lp-bub-out lp-d1">Oi João! Topa pintar amanhã de manhã? 😊<em>09:12 ✓✓</em></div>
+                <div className="lp-bub lp-bub-in lp-d2">Topo sim! Chego às 9h pelos R$ 150 ✅<em>09:13</em></div>
+                <div className="lp-bub lp-bub-out lp-typing lp-t2"><i/><i/><i/></div>
+                <div className="lp-bub lp-bub-out lp-d3">Fechado! Te espero 🙌<em>09:13 ✓✓</em></div>
               </div>
               <div className="lp-chat-bar"><span>Escreva sua mensagem…</span><div className="lp-send">➤</div></div>
             </div>
@@ -144,8 +191,8 @@ function PhoneDemo() {
 
           {/* tabbar do app */}
           <div className="lp-tabbar">
-            <div className={`lp-tab ${!isChat ? 'lp-tab-on' : ''}`}><i>▢</i>Trabalhos</div>
-            <div className="lp-tab"><i>♡</i>Interesses</div>
+            <div className={`lp-tab ${isSwipe ? 'lp-tab-on' : ''}`}><i>▢</i>Trabalhos</div>
+            <div className={`lp-tab ${isPick ? 'lp-tab-on' : ''}`}><i>♡</i>Interessados</div>
             <div className={`lp-tab ${isChat ? 'lp-tab-on' : ''}`}><i>💬</i>Conversas{isChat && <b>1</b>}</div>
             <div className="lp-tab"><i>◯</i>Perfil</div>
           </div>
@@ -600,6 +647,32 @@ body:has(.lp) #root { height:auto; min-height:100dvh; }
 .lp-tab-on { color:var(--lime); }
 .lp-tab b { position:absolute; top:-3px; right:-7px; background:#F87171; color:#fff; font-size:8px; width:13px; height:13px;
   border-radius:50%; display:flex; align-items:center; justify-content:center; }
+
+/* interessados (visão do contratante) */
+.lp-int { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; padding:6px 14px 10px; min-height:0; }
+.lp-int-list { display:flex; flex-direction:column; gap:9px; }
+.lp-int-card { display:flex; align-items:center; gap:9px; background:var(--surf); border:1.5px solid var(--bd);
+  border-radius:16px; padding:9px 10px; opacity:0; transform:translateY(10px); }
+.lp-int-c0 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .25s forwards; }
+.lp-int-c1 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .45s forwards; }
+.lp-int-c2 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .65s forwards; }
+.lp-int-av { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--surf2),#3a3a46);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
+.lp-int-info { flex:1; min-width:0; }
+.lp-int-name { font-weight:700; font-size:13.5px; }
+.lp-int-meta { color:var(--mut); font-size:10px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.lp-int-right { text-align:right; flex-shrink:0; position:relative; }
+.lp-int-preco { font-family:'Bricolage Grotesque'; font-weight:800; font-size:15px; color:var(--lime); line-height:1; }
+.lp-int-btn { margin-top:5px; font-size:10.5px; font-weight:700; color:var(--dim); border:1px solid var(--bd); border-radius:8px; padding:3px 9px; }
+/* o escolhido acende e o botão vira lime */
+.lp-int-chosen { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .25s forwards, lp-choose .5s ease 2.2s forwards; }
+@keyframes lp-choose { to { border-color:var(--lime); box-shadow:0 0 0 1px var(--lime), 0 12px 30px rgba(214,255,58,.16); transform:scale(1.025); } }
+.lp-int-chosen .lp-int-btn { animation:lp-btn-glow .4s ease 2.4s forwards; }
+@keyframes lp-btn-glow { to { background:var(--lime); color:#0E0E10; border-color:var(--lime); } }
+.lp-int-tap { position:absolute; right:-2px; bottom:-20px; font-size:25px; opacity:0; z-index:6; pointer-events:none;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); animation:lp-int-tap 1.3s ease 2.1s forwards; }
+@keyframes lp-int-tap { 0%{opacity:0; transform:translateY(10px) scale(1.1)} 28%{opacity:1; transform:translateY(0) scale(1)} 44%{transform:translateY(-3px) scale(.88)} 60%{transform:translateY(0) scale(1)} 100%{opacity:0} }
+.lp-int-hint { text-align:center; color:var(--mut); font-size:11px; font-weight:600; margin-top:auto; padding-top:10px; }
 
 /* chat */
 .lp-chat { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; min-height:0; }
