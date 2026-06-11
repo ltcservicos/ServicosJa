@@ -49,7 +49,7 @@ function Login({ onOk }) {
 }
 
 function Painel({ onSair }) {
-  const [tab, setTab] = useState('importar'); // importar | manual | lista
+  const [tab, setTab] = useState('analytics'); // analytics | importar | manual | lista | blog
   const [resumo, setResumo] = useState(null);
   const [externos, setExternos] = useState([]);
   const [msg, setMsg] = useState(null);
@@ -84,10 +84,12 @@ function Painel({ onSair }) {
       )}
 
       {/* Abas */}
-      <div className="flex gap-1.5 mb-4 bg-surface border border-border rounded-xl p-1">
+      <div className="flex gap-1.5 mb-4 bg-surface border border-border rounded-xl p-1 overflow-x-auto no-scrollbar">
+        <TabBtn ativo={tab === 'analytics'} onClick={() => setTab('analytics')}>📊 Analytics</TabBtn>
         <TabBtn ativo={tab === 'importar'} onClick={() => setTab('importar')}>🤖 Importar</TabBtn>
-        <TabBtn ativo={tab === 'manual'} onClick={() => setTab('manual')}>✍️ Postar manual</TabBtn>
-        <TabBtn ativo={tab === 'lista'} onClick={() => setTab('lista')}>📋 Publicados ({externos.length})</TabBtn>
+        <TabBtn ativo={tab === 'manual'} onClick={() => setTab('manual')}>✍️ Manual</TabBtn>
+        <TabBtn ativo={tab === 'lista'} onClick={() => setTab('lista')}>📋 ({externos.length})</TabBtn>
+        <TabBtn ativo={tab === 'blog'} onClick={() => setTab('blog')}>📰 Blog</TabBtn>
       </div>
 
       {msg && (
@@ -96,9 +98,11 @@ function Painel({ onSair }) {
         </div>
       )}
 
+      {tab === 'analytics' && <Analytics />}
       {tab === 'importar' && <Importar onFeito={(r) => { flash(r); recarregar(); }} onErro={(e) => flash(e, 'erro')} />}
       {tab === 'manual' && <Manual onFeito={() => { flash('Trabalho externo publicado! ✅'); recarregar(); setTab('lista'); }} onErro={(e) => flash(e, 'erro')} />}
       {tab === 'lista' && <Lista externos={externos} onRemover={async (id) => { await adminApi.remover(id); recarregar(); }} />}
+      {tab === 'blog' && <Blog onFlash={flash} />}
     </>
   );
 }
@@ -258,6 +262,160 @@ function Lista({ externos, onRemover }) {
   );
 }
 
+/* ===== ANALYTICS ===== */
+function Analytics() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => adminApi.analytics().then((d) => alive && setData(d)).catch(() => {});
+    load();
+    const id = setInterval(load, 15000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+
+  if (!data) return <div className="text-text-mute text-center py-10">Carregando…</div>;
+  const c = data.cards;
+  const max = Math.max(1, ...data.serie.map((d) => Math.max(d.visitas, d.cadastros, d.trabalhos, d.interesses)));
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-3 gap-2">
+        <Big n={c.visitas} l="Visitas" />
+        <Big n={c.cadastros} l="Cadastros" />
+        <Big n={`${c.conversao}%`} l="Conversão" />
+      </div>
+      <div className="grid grid-cols-4 gap-2">
+        <Stat n={c.contratantes} l="Contratantes" />
+        <Stat n={c.trabalhadores} l="Trabalhadores" />
+        <Stat n={c.trabalhos} l="Trabalhos" />
+        <Stat n={c.interesses} l="Interesses" />
+      </div>
+
+      {/* Gráfico de barras — últimos 14 dias */}
+      <div className="bg-surface border border-border rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="font-bold text-[15px]">Últimos 14 dias</div>
+          <div className="flex gap-3 text-[11px] text-text-mute">
+            <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#D6FF3A' }} />visitas</span>
+            <span className="flex items-center gap-1"><i className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: '#60A5FA' }} />cadastros</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-1 h-[130px]">
+          {data.serie.map((d, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1 justify-end h-full" title={`${d.dia}: ${d.visitas} visitas, ${d.cadastros} cadastros`}>
+              <div className="w-full flex items-end gap-[2px] justify-center h-full">
+                <span className="w-[42%] rounded-t" style={{ height: `${(d.visitas / max) * 100}%`, background: '#D6FF3A', minHeight: d.visitas ? 3 : 0 }} />
+                <span className="w-[42%] rounded-t" style={{ height: `${(d.cadastros / max) * 100}%`, background: '#60A5FA', minHeight: d.cadastros ? 3 : 0 }} />
+              </div>
+              <span className="text-[8px] text-text-mute">{d.dia.slice(0, 2)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Stat n={c.conversas} l="Conversas abertas" />
+        <Stat n={c.importados} l="Importados" />
+      </div>
+      <div className="text-[12px] text-text-mute text-center">Atualiza sozinho a cada 15s · funil: visita → cadastro → trabalho → interesse → conversa</div>
+    </div>
+  );
+}
+
+/* ===== BLOG ===== */
+function Blog({ onFlash }) {
+  const [keywords, setKeywords] = useState([]);
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  const recarregar = async () => {
+    try {
+      const [k, p] = await Promise.all([adminApi.blogKeywords(), adminApi.blogPosts()]);
+      setKeywords(k); setPosts(p);
+    } catch {}
+  };
+  useEffect(() => { recarregar(); }, []);
+
+  const gerar = async (kw, agora) => {
+    setLoading(true);
+    try {
+      const publishAt = agora ? undefined : new Date(Date.now() + 86400000).toISOString();
+      const r = await adminApi.blogGerar(kw, publishAt);
+      onFlash(r.status === 'PUBLICADO' ? 'Post publicado! ✅' : 'Post agendado para amanhã 🗓️');
+      recarregar();
+    } catch (e) { onFlash(e.message, 'erro'); }
+    finally { setLoading(false); }
+  };
+
+  const agendarLote = async () => {
+    setLoading(true);
+    try {
+      const r = await adminApi.blogAgendarLote();
+      onFlash(r.agendados > 0 ? `${r.agendados} post(s) agendados — 1 por dia 🗓️` : 'Todos os posts já foram criados');
+      recarregar();
+    } catch (e) { onFlash(e.message, 'erro'); }
+    finally { setLoading(false); }
+  };
+
+  const STATUS = { PUBLICADO: { t: '🟢 No ar', c: 'text-emerald-400' }, AGENDADO: { t: '🗓️ Agendado', c: 'text-orange-400' }, RASCUNHO: { t: 'Rascunho', c: 'text-text-mute' } };
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="bg-surface border border-border rounded-2xl p-5">
+        <div className="font-bold text-[17px] mb-1">Blog com SEO automático</div>
+        <div className="text-text-mute text-[13.5px] leading-relaxed mb-3">
+          Artigos otimizados para as palavras-chave mais buscadas do nicho. Geram páginas em
+          <code className="text-accent"> /blog</code> com meta tags, dados estruturados e sitemap.
+          Publique já ou agende.
+        </div>
+        <button onClick={agendarLote} disabled={loading}
+          className="min-h-[48px] w-full rounded-xl font-bold text-[15px] bg-accent text-bg disabled:opacity-50">
+          {loading ? '…' : '🗓️ Agendar todos (1 por dia)'}
+        </button>
+        <a href="/blog" target="_blank" rel="noreferrer" className="block text-center text-[13px] text-text-dim underline mt-3">Ver o blog publicado →</a>
+      </div>
+
+      <div>
+        <div className="text-[12.5px] text-text-mute uppercase tracking-wide font-semibold mb-2">Palavras-chave</div>
+        <div className="flex flex-col gap-2">
+          {keywords.map((k) => (
+            <div key={k.keyword} className="bg-surface border border-border rounded-xl p-3.5">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="font-semibold text-[14px]">{k.titulo}</div>
+                  <div className="text-[12px] text-text-mute mt-0.5">🔎 {k.keyword} · {k.categoria}</div>
+                </div>
+                {k.gerado
+                  ? <span className={`text-[11.5px] font-bold flex-shrink-0 ${STATUS[k.status]?.c}`}>{STATUS[k.status]?.t}</span>
+                  : <span className="text-[11.5px] text-text-mute flex-shrink-0">não criado</span>}
+              </div>
+              {!k.gerado && (
+                <div className="flex gap-2 mt-2.5">
+                  <button onClick={() => gerar(k.keyword, true)} disabled={loading}
+                    className="flex-1 py-2 rounded-lg text-[13px] font-bold bg-accent text-bg disabled:opacity-50">Publicar agora</button>
+                  <button onClick={() => gerar(k.keyword, false)} disabled={loading}
+                    className="flex-1 py-2 rounded-lg text-[13px] font-bold border border-border text-text-dim disabled:opacity-50">Agendar amanhã</button>
+                </div>
+              )}
+              {k.gerado && (
+                <a href={`/blog/${k.slug}`} target="_blank" rel="noreferrer" className="inline-block text-[12.5px] text-accent underline mt-2">Ver artigo →</a>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Big({ n, l }) {
+  return (
+    <div className="bg-surface border border-border rounded-2xl p-3.5 text-center">
+      <div className="font-display font-extrabold text-[26px] leading-none" style={{ color: 'var(--accent)' }}>{n ?? '—'}</div>
+      <div className="text-[11px] text-text-mute uppercase tracking-wide mt-1">{l}</div>
+    </div>
+  );
+}
 function Stat({ n, l }) {
   return (
     <div className="bg-surface border border-border rounded-xl p-3 text-center">

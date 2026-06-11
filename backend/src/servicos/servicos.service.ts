@@ -6,6 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventosService } from '../eventos/eventos.service';
 import { AceitarServicoDto, AprovarPrestadorDto, CreateServicoDto, EditarServicoDto } from './servicos.dto';
 
 const ESTADO = {
@@ -17,7 +18,7 @@ const ESTADO = {
 
 @Injectable()
 export class ServicosService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private eventos: EventosService) {}
 
   // ---------------- helpers ----------------
   private _serializeServico(s: any) {
@@ -106,6 +107,7 @@ export class ServicosService {
         estado: ESTADO.ABERTO,
       },
     });
+    this.eventos.track('TRABALHO_POSTADO', dto.categoria);
     return this._serializeServico(s);
   }
 
@@ -464,6 +466,7 @@ export class ServicosService {
       await tx.acaoServico.create({
         data: { servicoId, prestadorId, acao: 'ACEITOU', valorProposto: dto.valorProposto },
       });
+      this.eventos.track('INTERESSE');
 
       // Trabalho EXTERNO: não há contratante no app — devolve o contato direto
       // (WhatsApp ou link), para o app abrir a conversa fora.

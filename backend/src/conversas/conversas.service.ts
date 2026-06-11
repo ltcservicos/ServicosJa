@@ -5,11 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventosService } from '../eventos/eventos.service';
 import { AbrirConversaDto, EnviarMensagemDto } from './conversas.dto';
 
 @Injectable()
 export class ConversasService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private eventos: EventosService) {}
 
   private _serializeParte(u: any) {
     if (!u) return null;
@@ -78,6 +79,7 @@ export class ConversasService {
         servicoId: dto.servicoId,
       },
     });
+    this.eventos.track('CONVERSA');
 
     return this.getOne(conversa.id, userId);
   }

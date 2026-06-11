@@ -1,10 +1,16 @@
-import { Body, Controller, Delete, Get, Param, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AdminGuard, ADMIN_PASS, ADMIN_TOKEN, ADMIN_USER } from './admin.guard';
 import { AdminService } from './admin.service';
+import { EventosService } from '../eventos/eventos.service';
+import { BlogService } from '../blog/blog.service';
 
 @Controller('admin')
 export class AdminController {
-  constructor(private admin: AdminService) {}
+  constructor(
+    private admin: AdminService,
+    private eventos: EventosService,
+    private blog: BlogService,
+  ) {}
 
   // Login simples: devolve o token usado nas demais rotas
   @Post('login')
@@ -43,5 +49,49 @@ export class AdminController {
   @UseGuards(AdminGuard)
   remover(@Param('id') id: string) {
     return this.admin.removerExterno(id);
+  }
+
+  // ===== ANALYTICS =====
+  @Get('analytics')
+  @UseGuards(AdminGuard)
+  analytics() {
+    return this.eventos.resumo();
+  }
+
+  // ===== BLOG =====
+  @Get('blog/keywords')
+  @UseGuards(AdminGuard)
+  blogKeywords() {
+    return this.blog.keywords();
+  }
+
+  @Get('blog/posts')
+  @UseGuards(AdminGuard)
+  blogPosts() {
+    return this.blog.listarAdmin();
+  }
+
+  @Post('blog/gerar')
+  @UseGuards(AdminGuard)
+  blogGerar(@Body() body: { keyword: string; publishAt?: string }) {
+    return this.blog.gerar(body.keyword, body.publishAt);
+  }
+
+  @Post('blog/agendar-lote')
+  @UseGuards(AdminGuard)
+  blogAgendarLote() {
+    return this.blog.agendarLote();
+  }
+
+  @Post('blog/posts/:id/publicar')
+  @UseGuards(AdminGuard)
+  blogPublicar(@Param('id') id: string) {
+    return this.blog.publicarAgora(id);
+  }
+
+  @Delete('blog/posts/:id')
+  @UseGuards(AdminGuard)
+  blogRemover(@Param('id') id: string) {
+    return this.blog.remover(id);
   }
 }

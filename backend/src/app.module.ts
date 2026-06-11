@@ -8,10 +8,13 @@ import { NotificacoesModule } from './notificacoes/notificacoes.module';
 import { ConversasModule } from './conversas/conversas.module';
 import { AdminModule } from './admin/admin.module';
 import { ProfissionaisModule } from './profissionais/profissionais.module';
+import { EventosModule } from './eventos/eventos.module';
+import { BlogModule } from './blog/blog.module';
 
 @Module({
   imports: [
     PrismaModule,
+    EventosModule,
     AuthModule,
     UsersModule,
     ServicosModule,
@@ -20,6 +23,7 @@ import { ProfissionaisModule } from './profissionais/profissionais.module';
     ConversasModule,
     AdminModule,
     ProfissionaisModule,
+    BlogModule,
   ],
 })
 export class AppModule {}

@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventosService } from '../eventos/eventos.service';
 
 @Injectable()
 export class ProfissionaisService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private eventos: EventosService) {}
 
   private _perfil(u: any) {
     return {
@@ -93,6 +94,7 @@ export class ProfissionaisService {
       },
     });
 
+    this.eventos.track('CONVERSA');
     return { ok: true, conversaId: conversa.id };
   }
 

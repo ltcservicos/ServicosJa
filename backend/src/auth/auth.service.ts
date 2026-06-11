@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventosService } from '../eventos/eventos.service';
 import { LoginDto, SignupDto } from './auth.dto';
 
 @Injectable()
@@ -9,6 +10,7 @@ export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwt: JwtService,
+    private eventos: EventosService,
   ) {}
 
   // Guarda só os dígitos do WhatsApp — vira a chave de login
@@ -53,6 +55,8 @@ export class AuthService {
         statusVerificacao: 'APROVADO',
       },
     });
+
+    this.eventos.track(dto.tipo === 'prestador' ? 'CADASTRO_TRABALHADOR' : 'CADASTRO_CONTRATANTE', dto.cidade);
 
     return this._withToken(user);
   }

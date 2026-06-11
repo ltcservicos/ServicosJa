@@ -187,3 +187,33 @@ model Avaliacao {
   @@unique([servicoId, avaliadorId])
   @@index([avaliadoId])
 }
+
+// === EVENTO (analytics simples) ===
+model Evento {
+  id       String   @id @default(uuid())
+  tipo     String   // VISITA | CADASTRO_CONTRATANTE | CADASTRO_TRABALHADOR | TRABALHO_POSTADO | INTERESSE | CONVERSA | IMPORTADO
+  ref      String?  // contexto opcional (categoria, cidade…)
+  criadoEm DateTime @default(now())
+
+  @@index([tipo, criadoEm])
+}
+
+// === POST DO BLOG (SEO) ===
+model Post {
+  id              String   @id @default(uuid())
+  slug            String   @unique
+  titulo          String
+  resumo          String
+  metaDescription String
+  keyword         String
+  categoria       String
+  conteudo        String   // HTML do artigo
+  faq             String?  // JSON: [{ "q": "...", "a": "..." }]
+  status          String   @default("PUBLICADO") // RASCUNHO | AGENDADO | PUBLICADO
+  publishAt       DateTime @default(now())
+  views           Int      @default(0)
+  criadoEm        DateTime @default(now())
+  atualizadoEm    DateTime @updatedAt
+
+  @@index([status, publishAt])
+}

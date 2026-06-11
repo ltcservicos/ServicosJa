@@ -115,6 +115,15 @@ class AdminApi {
   postarExterno(body)   { return this.request('POST', '/externo', body); }
   externos()            { return this.request('GET', '/externos'); }
   remover(id)           { return this.request('DELETE', `/externos/${id}`); }
+  // analytics
+  analytics()           { return this.request('GET', '/analytics'); }
+  // blog
+  blogKeywords()        { return this.request('GET', '/blog/keywords'); }
+  blogPosts()           { return this.request('GET', '/blog/posts'); }
+  blogGerar(keyword, publishAt) { return this.request('POST', '/blog/gerar', { keyword, publishAt }); }
+  blogAgendarLote()     { return this.request('POST', '/blog/agendar-lote'); }
+  blogPublicar(id)      { return this.request('POST', `/blog/posts/${id}/publicar`); }
+  blogRemover(id)       { return this.request('DELETE', `/blog/posts/${id}`); }
 }
 
 export const adminApi = new AdminApi();

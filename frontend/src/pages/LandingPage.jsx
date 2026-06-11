@@ -283,6 +283,11 @@ function DragCard() {
 }
 
 export function LandingPage() {
+  // registra a visita (analytics) — 1x por carregamento
+  useEffect(() => {
+    fetch('/api/eventos/visita', { method: 'POST' }).catch(() => {});
+  }, []);
+
   // reveal no scroll
   useEffect(() => {
     const obs = new IntersectionObserver(
