@@ -24,15 +24,41 @@ const DEMO_JOBS = [
   { emoji: '💡', titulo: 'Trocar tomada queimada', bairro: 'Vila Madalena', tempo: 'há 25 min', g: ['#FB923C', '#EA580C'] },
 ];
 
-/* ---- Telefone com a demo do app rodando sozinha ---- */
+/* ---- Telefone com a demo do app rodando sozinha (v2) ----
+   Realismo: status bar, tabbar do app, mãozinha que arrasta o cartão,
+   "digitando…" no chat e tilt 3D suave seguindo o mouse. */
+const SWIPE_MS = 2900;
+const CHAT_MS = 5200;
+
 function PhoneDemo() {
   const [phase, setPhase] = useState(0); // 0,1,2 = swipe ; 3 = chat
+  const tiltRef = useRef(null);
+
   useEffect(() => {
-    let t;
-    const dur = phase === 3 ? 4000 : 2050;
-    t = setTimeout(() => setPhase((p) => (p + 1) % 4), dur);
+    const t = setTimeout(() => setPhase((p) => (p + 1) % 4), phase === 3 ? CHAT_MS : SWIPE_MS);
     return () => clearTimeout(t);
   }, [phase]);
+
+  // tilt 3D sutil seguindo o mouse (desktop)
+  useEffect(() => {
+    const el = tiltRef.current;
+    if (!el || window.matchMedia('(pointer: coarse)').matches) return;
+    let raf = 0;
+    const onMove = (e) => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect();
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+        el.style.transform = `perspective(1100px) rotateY(${px * 7}deg) rotateX(${-py * 5}deg)`;
+      });
+    };
+    const onLeave = () => { cancelAnimationFrame(raf); el.style.transform = 'perspective(1100px)'; };
+    const zone = el.parentElement;
+    zone.addEventListener('mousemove', onMove);
+    zone.addEventListener('mouseleave', onLeave);
+    return () => { zone.removeEventListener('mousemove', onMove); zone.removeEventListener('mouseleave', onLeave); cancelAnimationFrame(raf); };
+  }, []);
 
   const isChat = phase === 3;
   const job = DEMO_JOBS[phase % 3];
@@ -40,62 +66,93 @@ function PhoneDemo() {
   const nextJob = DEMO_JOBS[(phase + 1) % 3];
 
   return (
-    <div className="lp-phone" aria-hidden="true">
-      <div className="lp-phone-notch" />
-      <div className="lp-screen">
-        {/* topo do app */}
-        <div className="lp-appbar">
-          <div>
-            <div className="lp-appbar-t">Olá, João!</div>
-            <div className="lp-appbar-s">Trabalhos perto de você</div>
+    <div className="lp-tilt" ref={tiltRef} aria-hidden="true">
+      <div className="lp-phone">
+        <div className="lp-phone-notch" />
+        <div className="lp-screen">
+          {/* status bar */}
+          <div className="lp-status">
+            <span>9:41</span>
+            <span className="lp-status-r"><i className="lp-sig" /><i className="lp-bat" /></span>
           </div>
-          <div className="lp-appbar-dot" />
-        </div>
 
-        {!isChat ? (
-          <div className="lp-stage">
-            {/* cartão de baixo (espia o próximo) */}
-            <div className="lp-card lp-card-behind">
-              <div className="lp-card-img" style={{ background: `linear-gradient(135deg, ${nextJob.g[0]}, ${nextJob.g[1]})` }}>
-                <span>{nextJob.emoji}</span>
-              </div>
+          {/* topo do app */}
+          <div className="lp-appbar">
+            <div>
+              <div className="lp-appbar-t">Olá, João!</div>
+              <div className="lp-appbar-s">Trabalhos perto de você</div>
             </div>
-            {/* cartão de cima (anima entrar→sair) */}
-            <div key={phase} className={`lp-card lp-card-top lp-fly-${dir}`}>
-              <div className={`lp-stamp lp-stamp-${dir}`}>{dir === 'yes' ? 'QUERO ❤️' : 'PASSO ✖'}</div>
-              <div className="lp-card-img" style={{ background: `linear-gradient(135deg, ${job.g[0]}, ${job.g[1]})` }}>
-                <span>{job.emoji}</span>
-                <div className="lp-chip-loc">📍 {job.bairro}</div>
-              </div>
-              <div className="lp-card-body">
-                <div className="lp-card-title">{job.titulo}</div>
-                <div className="lp-card-meta">📍 {job.bairro} · {job.tempo}</div>
-              </div>
-            </div>
-            {/* botões */}
-            <div className="lp-actions">
-              <div className={`lp-act lp-act-no ${dir === 'no' ? 'lp-act-on' : ''}`}>✖</div>
-              <div className={`lp-act lp-act-yes ${dir === 'yes' ? 'lp-act-on' : ''}`}>❤</div>
-            </div>
+            <div className="lp-appbar-dot"><span /></div>
           </div>
-        ) : (
-          <div className="lp-chat" key="chat">
-            <div className="lp-chat-head">
-              <div className="lp-chat-av">MC</div>
-              <div>
-                <div className="lp-chat-name">Maria Costa</div>
-                <div className="lp-chat-sub">🛠️ Pintar a parede da sala</div>
+
+          {!isChat ? (
+            <div className="lp-stage">
+              {/* cartão de baixo (espia o próximo) */}
+              <div className="lp-card lp-card-behind">
+                <div className="lp-card-img" style={{ background: `linear-gradient(135deg, ${nextJob.g[0]}, ${nextJob.g[1]})` }}>
+                  <span>{nextJob.emoji}</span>
+                </div>
+                <div className="lp-card-body">
+                  <div className="lp-card-title">{nextJob.titulo}</div>
+                </div>
+              </div>
+
+              {/* cartão de cima — entra, "é arrastado" pela mãozinha e sai */}
+              <div key={phase} className={`lp-card lp-card-top lp-fly-${dir}`}>
+                <div className={`lp-stamp lp-stamp-${dir}`}>{dir === 'yes' ? 'QUERO ❤️' : 'PASSO ✖'}</div>
+                <div className="lp-card-img" style={{ background: `linear-gradient(135deg, ${job.g[0]}, ${job.g[1]})` }}>
+                  <span>{job.emoji}</span>
+                  <div className="lp-chip-cat">{job.emoji} {job.titulo.split(' ')[0]}</div>
+                  <div className="lp-chip-loc">📍 {job.bairro}</div>
+                </div>
+                <div className="lp-card-body">
+                  <div className="lp-card-title">{job.titulo}</div>
+                  <div className="lp-lines"><i style={{ width: '92%' }} /><i style={{ width: '74%' }} /></div>
+                  <div className="lp-card-meta">📍 {job.bairro} · {job.tempo}</div>
+                </div>
+              </div>
+
+              {/* mãozinha que faz o gesto */}
+              <div key={`h${phase}`} className={`lp-hand lp-hand-${dir}`}>👆</div>
+
+              {/* botões do app */}
+              <div className="lp-actions">
+                <div key={`n${phase}`} className={`lp-act lp-act-no ${dir === 'no' ? 'lp-act-pulse' : ''}`}>✕</div>
+                <div key={`y${phase}`} className={`lp-act lp-act-yes ${dir === 'yes' ? 'lp-act-pulse' : ''}`}>♥</div>
               </div>
             </div>
-            <div className="lp-bubbles">
-              <div className="lp-bub lp-bub-in lp-d1">Oi João! Pode vir amanhã de manhã? 😊</div>
-              <div className="lp-bub lp-bub-out lp-d2">Posso sim! Chego às 9h ✅</div>
-              <div className="lp-bub lp-bub-in lp-d3">Combinado! Te espero 🙌</div>
+          ) : (
+            <div className="lp-chat" key="chat">
+              <div className="lp-chat-head">
+                <div className="lp-chat-av">MC</div>
+                <div className="lp-chat-hd">
+                  <div className="lp-chat-name">Maria Costa</div>
+                  <div className="lp-chat-sub">🛠️ Pintar a parede da sala</div>
+                </div>
+                <div className="lp-chat-online" />
+              </div>
+              <div className="lp-bubbles">
+                <div className="lp-bub lp-bub-in lp-typing lp-t1"><i/><i/><i/></div>
+                <div className="lp-bub lp-bub-in lp-d1">Oi João! Pode vir amanhã de manhã? 😊<em>09:12</em></div>
+                <div className="lp-bub lp-bub-out lp-d2">Posso sim! Chego às 9h ✅<em>09:13 ✓✓</em></div>
+                <div className="lp-bub lp-bub-in lp-typing lp-t2"><i/><i/><i/></div>
+                <div className="lp-bub lp-bub-in lp-d3">Combinado! Te espero 🙌<em>09:13</em></div>
+              </div>
+              <div className="lp-chat-bar"><span>Escreva sua mensagem…</span><div className="lp-send">➤</div></div>
             </div>
-            <div className="lp-chat-bar"><span>Escreva sua mensagem…</span><div className="lp-send">➤</div></div>
+          )}
+
+          {/* tabbar do app */}
+          <div className="lp-tabbar">
+            <div className={`lp-tab ${!isChat ? 'lp-tab-on' : ''}`}><i>▢</i>Trabalhos</div>
+            <div className="lp-tab"><i>♡</i>Interesses</div>
+            <div className={`lp-tab ${isChat ? 'lp-tab-on' : ''}`}><i>💬</i>Conversas{isChat && <b>1</b>}</div>
+            <div className="lp-tab"><i>◯</i>Perfil</div>
           </div>
-        )}
+        </div>
+        <div className="lp-screen-glare" />
       </div>
+      <div className="lp-phone-glow" />
     </div>
   );
 }
@@ -401,13 +458,14 @@ body:has(.lp) #root { height:auto; min-height:100dvh; }
 .lp-btn { display:inline-flex; align-items:center; gap:8px; font-weight:700; border-radius:14px;
   padding:13px 20px; font-size:15px; transition:transform .15s, box-shadow .2s, background .2s; cursor:pointer; border:0; }
 .lp-btn:active { transform:scale(.97); }
-.lp-btn-lime { background:var(--lime); color:#0E0E10; box-shadow:0 8px 30px rgba(214,255,58,.25); }
-.lp-btn-lime:hover { box-shadow:0 12px 40px rgba(214,255,58,.4); transform:translateY(-2px); }
-.lp-btn-blue { background:var(--blue); color:#06122b; box-shadow:0 8px 30px rgba(96,165,250,.22); }
-.lp-btn-blue:hover { box-shadow:0 12px 40px rgba(96,165,250,.38); transform:translateY(-2px); }
-.lp-btn-ghost { background:transparent; color:var(--tx); border:1px solid var(--bd); }
-.lp-btn-ghost:hover { background:var(--surf); }
-.lp-btn-sm { background:var(--lime); color:#0E0E10; padding:10px 16px; font-size:14px; border-radius:12px; }
+/* .lp .x para vencer a especificidade de ".lp a { color:inherit }" */
+.lp .lp-btn-lime { background:var(--lime); color:#0E0E10; box-shadow:0 8px 30px rgba(214,255,58,.25); }
+.lp .lp-btn-lime:hover { box-shadow:0 12px 40px rgba(214,255,58,.4); transform:translateY(-2px); }
+.lp .lp-btn-blue { background:var(--blue); color:#06122b; box-shadow:0 8px 30px rgba(96,165,250,.22); }
+.lp .lp-btn-blue:hover { box-shadow:0 12px 40px rgba(96,165,250,.38); transform:translateY(-2px); }
+.lp .lp-btn-ghost { background:transparent; color:var(--tx); border:1px solid var(--bd); }
+.lp .lp-btn-ghost:hover { background:var(--surf); }
+.lp .lp-btn-sm { background:var(--lime); color:#0E0E10; padding:10px 16px; font-size:14px; border-radius:12px; }
 .lp-mt { margin-top:24px; }
 
 /* HERO */
@@ -432,70 +490,145 @@ body:has(.lp) #root { height:auto; min-height:100dvh; }
 @keyframes lp-drift { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,40px)} }
 .lp-hero-text,.lp-hero-phone { position:relative; z-index:1; }
 
-/* PHONE */
+/* PHONE v2 */
 .lp-hero-phone { display:flex; justify-content:center; position:relative; }
-.lp-phone { position:relative; width:290px; height:590px; background:#0c0c0f; border-radius:42px;
-  border:1px solid #26262e; box-shadow:0 40px 90px rgba(0,0,0,.6), inset 0 0 0 6px #07070a; padding:11px; }
-.lp-phone-notch { position:absolute; top:16px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#07070a; border-radius:14px; z-index:5; }
-.lp-screen { width:100%; height:100%; background:var(--soft); border-radius:32px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
-.lp-appbar { padding:34px 18px 12px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0; }
+.lp-tilt { position:relative; transition:transform .25s ease-out; will-change:transform; }
+.lp-phone { position:relative; width:294px; height:600px; background:linear-gradient(160deg,#17171c,#0b0b0e); border-radius:44px;
+  border:1px solid #2c2c36; box-shadow:0 50px 100px rgba(0,0,0,.65), 0 0 0 2px #07070a, inset 0 1px 0 rgba(255,255,255,.06); padding:10px; z-index:2; }
+.lp-phone-glow { position:absolute; left:50%; bottom:-26px; transform:translateX(-50%); width:78%; height:60px;
+  background:radial-gradient(ellipse at center, rgba(214,255,58,.32), rgba(96,165,250,.12) 55%, transparent 75%);
+  filter:blur(26px); z-index:1; pointer-events:none; animation:lp-glow 5s ease-in-out infinite; }
+@keyframes lp-glow { 0%,100%{opacity:.8} 50%{opacity:.45} }
+.lp-phone-notch { position:absolute; top:18px; left:50%; transform:translateX(-50%); width:92px; height:23px; background:#07070a; border-radius:13px; z-index:6; }
+.lp-screen { width:100%; height:100%; background:var(--soft); border-radius:36px; overflow:hidden; position:relative; display:flex; flex-direction:column; }
+.lp-screen-glare { position:absolute; inset:10px; border-radius:36px; pointer-events:none; z-index:7;
+  background:linear-gradient(115deg, rgba(255,255,255,.06) 0%, transparent 28%); }
+
+/* status bar */
+.lp-status { display:flex; justify-content:space-between; align-items:center; padding:14px 24px 0; font-size:12px; font-weight:700; flex-shrink:0; }
+.lp-status-r { display:flex; gap:5px; align-items:center; }
+.lp-sig { width:15px; height:9px; display:inline-block;
+  background:linear-gradient(to right,#F4F4F6 0 2.5px,transparent 2.5px 4px,#F4F4F6 4px 6.5px,transparent 6.5px 8px,#F4F4F6 8px 10.5px,transparent 10.5px 12px,#9C9CA8 12px 14.5px);
+  clip-path:polygon(0 60%,100% 0,100% 100%,0 100%); }
+.lp-bat { width:20px; height:10px; border:1.5px solid #9C9CA8; border-radius:3px; display:inline-block; position:relative; }
+.lp-bat::after { content:''; position:absolute; inset:1.5px; right:5px; background:var(--lime); border-radius:1px; }
+
+/* appbar */
+.lp-appbar { padding:10px 18px 10px; display:flex; justify-content:space-between; align-items:flex-end; flex-shrink:0; }
 .lp-appbar-t { font-family:'Bricolage Grotesque'; font-weight:800; font-size:18px; }
 .lp-appbar-s { color:var(--mut); font-size:11.5px; margin-top:2px; }
-.lp-appbar-dot { width:34px; height:34px; border-radius:10px; background:var(--surf); border:1px solid var(--bd); }
+.lp-appbar-dot { width:34px; height:34px; border-radius:11px; background:var(--surf); border:1px solid var(--bd); position:relative; }
+.lp-appbar-dot span { position:absolute; top:7px; right:7px; width:7px; height:7px; border-radius:50%; background:#F87171; }
 
 /* swipe stage */
-.lp-stage { flex:1; position:relative; padding:6px 16px 16px; }
-.lp-card { position:absolute; left:16px; right:16px; top:6px; bottom:74px; background:var(--surf); border:1px solid var(--bd);
-  border-radius:22px; overflow:hidden; display:flex; flex-direction:column; }
-.lp-card-behind { transform:scale(.94) translateY(-8px); opacity:.6; }
+.lp-stage { flex:1; position:relative; padding:4px 16px 12px; }
+.lp-card { position:absolute; left:16px; right:16px; top:4px; bottom:72px; background:var(--surf); border:1px solid var(--bd);
+  border-radius:22px; overflow:hidden; display:flex; flex-direction:column; box-shadow:0 18px 40px rgba(0,0,0,.35); }
+.lp-card-behind { transform:scale(.93) translateY(-10px); opacity:.55; filter:saturate(.7); }
 .lp-card-top { z-index:2; }
-.lp-card-img { height:60%; display:flex; align-items:flex-start; justify-content:center; font-size:64px; position:relative; }
-.lp-card-img span { margin-top:42px; filter:drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+.lp-card-img { height:56%; display:flex; align-items:center; justify-content:center; font-size:62px; position:relative; }
+.lp-card-img::after { content:''; position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.12), transparent 35%, transparent 55%, rgba(20,20,26,.9)); }
+.lp-card-img span { filter:drop-shadow(0 8px 18px rgba(0,0,0,.4)); position:relative; }
+.lp-chip-cat { position:absolute; top:10px; left:10px; background:rgba(0,0,0,.55); backdrop-filter:blur(6px);
+  font-size:10.5px; font-weight:700; padding:5px 9px; border-radius:8px; color:#fff; z-index:1; }
 .lp-chip-loc { position:absolute; top:10px; right:10px; background:rgba(0,0,0,.55); backdrop-filter:blur(6px);
-  font-size:10.5px; padding:5px 9px; border-radius:8px; color:#fff; }
-.lp-card-body { padding:13px 15px; flex:1; }
-.lp-card-title { font-family:'Bricolage Grotesque'; font-weight:700; font-size:17px; line-height:1.15; }
-.lp-card-meta { color:var(--mut); font-size:11.5px; margin-top:7px; }
-.lp-stamp { position:absolute; top:24px; padding:6px 12px; border-radius:9px; font-family:'Bricolage Grotesque';
-  font-weight:800; font-size:17px; z-index:4; opacity:0; }
-.lp-stamp-yes { right:14px; transform:rotate(13deg); color:#34D399; border:3px solid #34D399; }
-.lp-stamp-no { left:14px; transform:rotate(-13deg); color:#F87171; border:3px solid #F87171; }
+  font-size:10.5px; padding:5px 9px; border-radius:8px; color:#fff; z-index:1; }
+.lp-card-body { padding:12px 15px; flex:1; display:flex; flex-direction:column; }
+.lp-card-title { font-family:'Bricolage Grotesque'; font-weight:700; font-size:16.5px; line-height:1.15; }
+.lp-lines { margin-top:8px; display:flex; flex-direction:column; gap:5px; }
+.lp-lines i { display:block; height:7px; border-radius:4px; background:var(--surf2); }
+.lp-card-meta { color:var(--mut); font-size:11px; margin-top:auto; padding-top:8px; border-top:1px solid var(--bd); }
+.lp-stamp { position:absolute; top:22px; padding:6px 12px; border-radius:9px; font-family:'Bricolage Grotesque';
+  font-weight:800; font-size:17px; z-index:4; opacity:0; background:rgba(10,10,12,.45); backdrop-filter:blur(3px); }
+.lp-stamp-yes { right:14px; transform:rotate(12deg); color:#34D399; border:3px solid #34D399; }
+.lp-stamp-no { left:14px; transform:rotate(-12deg); color:#F87171; border:3px solid #F87171; }
 
-/* animação entra→sai */
-.lp-fly-yes { animation:lp-enter .5s ease-out, lp-out-yes .5s ease-in 1.55s forwards; }
-.lp-fly-no { animation:lp-enter .5s ease-out, lp-out-no .5s ease-in 1.55s forwards; }
-.lp-fly-yes .lp-stamp-yes { animation:lp-stamp 1.5s ease-out forwards; }
-.lp-fly-no .lp-stamp-no { animation:lp-stamp 1.5s ease-out forwards; }
-@keyframes lp-enter { from{ transform:scale(.92) translateY(8px); opacity:.4 } to{ transform:none; opacity:1 } }
-@keyframes lp-out-yes { to{ transform:translateX(360px) rotate(26deg); opacity:0 } }
-@keyframes lp-out-no { to{ transform:translateX(-360px) rotate(-26deg); opacity:0 } }
-@keyframes lp-stamp { 0%,55%{opacity:0} 75%,100%{opacity:1} }
+/* coreografia: entra → mãozinha arrasta → sai (2.9s no total) */
+.lp-fly-yes { animation:lp-card-yes ${SWIPE_MS}ms cubic-bezier(.3,.7,.3,1) forwards; }
+.lp-fly-no { animation:lp-card-no ${SWIPE_MS}ms cubic-bezier(.3,.7,.3,1) forwards; }
+@keyframes lp-card-yes {
+  0% { transform:scale(.93) translateY(10px); opacity:.55; }
+  10%,46% { transform:none; opacity:1; }
+  62% { transform:translateX(34px) rotate(2.5deg); }
+  74% { transform:translateX(110px) rotate(8deg); }
+  100% { transform:translateX(420px) rotate(26deg) translateY(-30px); opacity:0; }
+}
+@keyframes lp-card-no {
+  0% { transform:scale(.93) translateY(10px); opacity:.55; }
+  10%,46% { transform:none; opacity:1; }
+  62% { transform:translateX(-34px) rotate(-2.5deg); }
+  74% { transform:translateX(-110px) rotate(-8deg); }
+  100% { transform:translateX(-420px) rotate(-26deg) translateY(-30px); opacity:0; }
+}
+.lp-fly-yes .lp-stamp-yes, .lp-fly-no .lp-stamp-no { animation:lp-stamp ${SWIPE_MS}ms ease forwards; }
+@keyframes lp-stamp { 0%,52%{opacity:0; transform:scale(1.3) rotate(12deg)} 64%,88%{opacity:1; transform:scale(1) rotate(12deg)} 100%{opacity:1} }
+
+/* mãozinha do gesto */
+.lp-hand { position:absolute; bottom:38%; left:50%; font-size:38px; z-index:5; pointer-events:none; opacity:0;
+  filter:drop-shadow(0 6px 12px rgba(0,0,0,.5)); }
+.lp-hand-yes { animation:lp-hand-yes ${SWIPE_MS}ms cubic-bezier(.3,.7,.3,1) forwards; }
+.lp-hand-no { animation:lp-hand-no ${SWIPE_MS}ms cubic-bezier(.3,.7,.3,1) forwards; }
+@keyframes lp-hand-yes {
+  0%,34% { opacity:0; transform:translate(-50%,16px) scale(1.15); }
+  44% { opacity:1; transform:translate(-50%,0) scale(1); }
+  62% { opacity:1; transform:translate(calc(-50% + 38px),-6px) scale(.95); }
+  78% { opacity:0; transform:translate(calc(-50% + 120px),-14px) scale(.9); }
+  100% { opacity:0; }
+}
+@keyframes lp-hand-no {
+  0%,34% { opacity:0; transform:translate(-50%,16px) scale(1.15); }
+  44% { opacity:1; transform:translate(-50%,0) scale(1); }
+  62% { opacity:1; transform:translate(calc(-50% - 38px),-6px) scale(.95); }
+  78% { opacity:0; transform:translate(calc(-50% - 120px),-14px) scale(.9); }
+  100% { opacity:0; }
+}
 
 /* botões do app */
-.lp-actions { position:absolute; bottom:18px; left:0; right:0; display:flex; justify-content:center; gap:26px; z-index:3; }
-.lp-act { width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:20px;
-  background:var(--surf); border:2px solid var(--bd); transition:transform .2s; }
+.lp-actions { position:absolute; bottom:14px; left:0; right:0; display:flex; justify-content:center; gap:26px; z-index:3; }
+.lp-act { width:48px; height:48px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:700;
+  background:var(--surf); border:2px solid var(--bd); }
 .lp-act-no { color:#F87171; border-color:#F8717155; }
-.lp-act-yes { color:#0E0E10; background:#34D399; border-color:#34D399; }
-.lp-act-on { transform:scale(1.18); box-shadow:0 0 24px rgba(52,211,153,.4); }
+.lp-act-yes { color:#0E0E10; background:#34D399; border-color:#34D399; box-shadow:0 6px 18px rgba(52,211,153,.3); }
+.lp-act-pulse { animation:lp-press ${SWIPE_MS}ms ease forwards; }
+@keyframes lp-press { 0%,60%{transform:none} 70%{transform:scale(1.25); box-shadow:0 0 0 10px rgba(52,211,153,.18)} 82%,100%{transform:none} }
+
+/* tabbar do app */
+.lp-tabbar { flex-shrink:0; display:flex; justify-content:space-around; padding:8px 8px 18px; border-top:1px solid var(--bd); background:rgba(12,12,15,.7); }
+.lp-tab { display:flex; flex-direction:column; align-items:center; gap:3px; font-size:9.5px; font-weight:700; color:var(--mut); position:relative; }
+.lp-tab i { font-style:normal; font-size:15px; line-height:1; }
+.lp-tab-on { color:var(--lime); }
+.lp-tab b { position:absolute; top:-3px; right:-7px; background:#F87171; color:#fff; font-size:8px; width:13px; height:13px;
+  border-radius:50%; display:flex; align-items:center; justify-content:center; }
 
 /* chat */
-.lp-chat { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; }
-.lp-chat-head { display:flex; gap:10px; align-items:center; padding:8px 16px 12px; border-bottom:1px solid var(--bd); }
-.lp-chat-av { width:36px; height:36px; border-radius:50%; background:var(--surf2); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; }
+.lp-chat { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; min-height:0; }
+.lp-chat-head { display:flex; gap:10px; align-items:center; padding:6px 16px 11px; border-bottom:1px solid var(--bd); }
+.lp-chat-av { width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg,var(--surf2),#3a3a46); display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; }
+.lp-chat-hd { flex:1; }
 .lp-chat-name { font-weight:700; font-size:14.5px; }
 .lp-chat-sub { color:var(--mut); font-size:11px; }
-.lp-bubbles { flex:1; padding:16px; display:flex; flex-direction:column; gap:9px; }
-.lp-bub { max-width:78%; padding:9px 12px; font-size:13px; line-height:1.35; opacity:0; }
+.lp-chat-online { width:9px; height:9px; border-radius:50%; background:#34D399; box-shadow:0 0 8px #34D399; }
+.lp-bubbles { flex:1; padding:14px 16px; display:flex; flex-direction:column; gap:8px; overflow:hidden; }
+.lp-bub { max-width:80%; padding:8px 11px; font-size:12.5px; line-height:1.35; opacity:0; position:relative; }
+.lp-bub em { font-style:normal; font-size:9px; opacity:.65; margin-left:7px; }
 .lp-bub-in { align-self:flex-start; background:var(--surf2); border-radius:15px 15px 15px 4px; }
 .lp-bub-out { align-self:flex-end; background:#0c7c59; color:#fff; border-radius:15px 15px 4px 15px; }
-.lp-d1 { animation:lp-pop .4s ease .3s forwards; }
-.lp-d2 { animation:lp-pop .4s ease 1.2s forwards; }
-.lp-d3 { animation:lp-pop .4s ease 2.1s forwards; }
-@keyframes lp-pop { from{opacity:0; transform:translateY(8px) scale(.96)} to{opacity:1; transform:none} }
+/* digitando… aparece e some antes da mensagem */
+.lp-typing { display:flex; gap:4px; align-items:center; padding:11px 13px; }
+.lp-typing i { width:6px; height:6px; border-radius:50%; background:var(--mut); animation:lp-dot 1s infinite; }
+.lp-typing i:nth-child(2){ animation-delay:.15s } .lp-typing i:nth-child(3){ animation-delay:.3s }
+@keyframes lp-dot { 0%,100%{opacity:.3; transform:translateY(0)} 50%{opacity:1; transform:translateY(-3px)} }
+.lp-t1 { animation:lp-show .2s ease .3s forwards, lp-hide .2s ease 1.15s forwards; }
+.lp-d1 { animation:lp-pop .35s cubic-bezier(.2,.8,.2,1) 1.35s forwards; }
+.lp-d2 { animation:lp-pop .35s cubic-bezier(.2,.8,.2,1) 2.45s forwards; }
+.lp-t2 { animation:lp-show .2s ease 3.1s forwards, lp-hide .2s ease 3.85s forwards; }
+.lp-d3 { animation:lp-pop .35s cubic-bezier(.2,.8,.2,1) 4.05s forwards; }
+@keyframes lp-show { to{opacity:1} }
+@keyframes lp-hide { to{opacity:0; height:0; padding:0; margin:-4px 0 0} }
+@keyframes lp-pop { from{opacity:0; transform:translateY(10px) scale(.95)} to{opacity:1; transform:none} }
 @keyframes lp-fade { from{opacity:0} to{opacity:1} }
-.lp-chat-bar { margin:0 14px 16px; padding:11px 14px; background:var(--surf); border:1px solid var(--bd); border-radius:14px;
-  display:flex; align-items:center; justify-content:space-between; color:var(--mut); font-size:12.5px; }
+.lp-chat-bar { margin:0 14px 12px; padding:10px 14px; background:var(--surf); border:1px solid var(--bd); border-radius:14px;
+  display:flex; align-items:center; justify-content:space-between; color:var(--mut); font-size:12.5px; flex-shrink:0; }
 .lp-send { width:30px; height:30px; border-radius:50%; background:var(--lime); color:#0E0E10; display:flex; align-items:center; justify-content:center; font-size:13px; }
 
 /* floats */
