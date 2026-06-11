@@ -19,9 +19,9 @@ const I = {
 };
 
 const DEMO_JOBS = [
-  { emoji: '🎨', titulo: 'Pintar a parede da sala', bairro: 'Pinheiros', tempo: 'há 3 min', g: ['#D6FF3A', '#7Bb800'] },
-  { emoji: '🚰', titulo: 'Vazamento na pia', bairro: 'Centro', tempo: 'há 12 min', g: ['#60A5FA', '#2563EB'] },
-  { emoji: '💡', titulo: 'Trocar tomada queimada', bairro: 'Vila Madalena', tempo: 'há 25 min', g: ['#FB923C', '#EA580C'] },
+  { emoji: '🎨', titulo: 'Pintar a parede da sala', bairro: 'Pinheiros', dist: 'a 1,2 km', tempo: 'há 3 min', g: ['#D6FF3A', '#7Bb800'] },
+  { emoji: '🚰', titulo: 'Vazamento na pia', bairro: 'Centro', dist: 'a 800 m', tempo: 'há 12 min', g: ['#60A5FA', '#2563EB'] },
+  { emoji: '💡', titulo: 'Trocar tomada queimada', bairro: 'Vila Madalena', dist: 'a 2,4 km', tempo: 'há 25 min', g: ['#FB923C', '#EA580C'] },
 ];
 
 /* ---- Telefone com a demo do app rodando sozinha (v2) ----
@@ -103,12 +103,12 @@ function PhoneDemo() {
                 <div className="lp-card-img" style={{ background: `linear-gradient(135deg, ${job.g[0]}, ${job.g[1]})` }}>
                   <span>{job.emoji}</span>
                   <div className="lp-chip-cat">{job.emoji} {job.titulo.split(' ')[0]}</div>
-                  <div className="lp-chip-loc">📍 {job.bairro}</div>
+                  <div className="lp-chip-loc">📍 {job.dist}</div>
                 </div>
                 <div className="lp-card-body">
                   <div className="lp-card-title">{job.titulo}</div>
                   <div className="lp-lines"><i style={{ width: '92%' }} /><i style={{ width: '74%' }} /></div>
-                  <div className="lp-card-meta">📍 {job.bairro} · {job.tempo}</div>
+                  <div className="lp-card-meta">📍 {job.bairro} · <b className="lp-dist">{job.dist} de você</b> · {job.tempo}</div>
                 </div>
               </div>
 
@@ -223,11 +223,11 @@ function DragCard() {
         <div className="lp-drag-no">✖ PASSO</div>
         <div className="lp-card-img lp-drag-img" style={{ background: `linear-gradient(135deg, ${job.g[0]}, ${job.g[1]})` }}>
           <span>{job.emoji}</span>
-          <div className="lp-chip-loc">📍 {job.bairro}</div>
+          <div className="lp-chip-loc">📍 {job.dist}</div>
         </div>
         <div className="lp-card-body">
           <div className="lp-card-title">{job.titulo}</div>
-          <div className="lp-card-meta">Arraste o cartão ou use os botões 👇</div>
+          <div className="lp-card-meta">📍 {job.bairro} · <b className="lp-dist">{job.dist} de você</b></div>
         </div>
       </div>
       <div className="lp-drag-hint">{liked === true ? '❤️ Interesse enviado!' : liked === false ? 'Tudo bem, próximo!' : '⟵ arraste para os lados ⟶'}</div>
@@ -538,6 +538,7 @@ body:has(.lp) #root { height:auto; min-height:100dvh; }
 .lp-lines { margin-top:8px; display:flex; flex-direction:column; gap:5px; }
 .lp-lines i { display:block; height:7px; border-radius:4px; background:var(--surf2); }
 .lp-card-meta { color:var(--mut); font-size:11px; margin-top:auto; padding-top:8px; border-top:1px solid var(--bd); }
+.lp-dist { color:#34D399; font-weight:700; font-style:normal; }
 .lp-stamp { position:absolute; top:22px; padding:6px 12px; border-radius:9px; font-family:'Bricolage Grotesque';
   font-weight:800; font-size:17px; z-index:4; opacity:0; background:rgba(10,10,12,.45); backdrop-filter:blur(3px); }
 .lp-stamp-yes { right:14px; transform:rotate(12deg); color:#34D399; border:3px solid #34D399; }
