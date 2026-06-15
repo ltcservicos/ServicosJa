@@ -1,6 +1,8 @@
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './context/ToastContext';
+import { PWAProvider } from './context/PWAContext';
+import { InstallBanner } from './components/InstallBanner';
 
 import { LandingPage } from './pages/LandingPage';
 import { Landing } from './pages/Landing';
@@ -62,6 +64,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
+        <PWAProvider>
         <SessionProvider>
           <Routes>
             <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
@@ -96,7 +99,9 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <InstallBanner />
         </SessionProvider>
+        </PWAProvider>
       </ToastProvider>
     </BrowserRouter>
   );
