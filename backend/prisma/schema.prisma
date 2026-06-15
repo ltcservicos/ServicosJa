@@ -33,6 +33,8 @@ model Usuario {
   statusVerificacao   String @default("PENDENTE") // PENDENTE | EM_REVISAO | APROVADO | REPROVADO
   notaMedia           Float  @default(0)
   totalAvaliacoes     Int    @default(0)
+  lat                 Float?  // geocodificado da cidade/bairro (p/ distância na busca de profissionais)
+  lng                 Float?
   criadoEm     DateTime @default(now())
   ativo        Boolean  @default(true)
 

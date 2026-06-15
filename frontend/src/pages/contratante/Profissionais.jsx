@@ -15,16 +15,31 @@ export function Profissionais() {
   const [categoria, setCategoria] = useState(null); // null = todas
   const [lista, setLista] = useState(null);
   const [idx, setIdx] = useState(0);
+  const [pos, setPos] = useState(null);
 
-  const carregar = async (cat = categoria) => {
+  const carregar = async (cat = categoria, p = pos) => {
     try {
-      const data = await api.profissionais(cat?.nome);
+      const data = await api.profissionais(cat?.nome, p ? { lat: p.lat, lng: p.lng } : null);
       setLista(data);
       setIdx(0);
     } catch (e) { toast(e.message, 'error'); }
   };
 
-  useEffect(() => { carregar(); }, []);
+  // Pega a localização do contratante p/ mostrar a distância de cada profissional
+  useEffect(() => {
+    let cancelado = false;
+    const seguir = (p) => { if (cancelado) return; setPos(p); carregar(categoria, p); };
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (r) => seguir({ lat: r.coords.latitude, lng: r.coords.longitude }),
+        () => carregar(categoria, null), // sem GPS: lista sem distância
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+      );
+    } else {
+      carregar(categoria, null);
+    }
+    return () => { cancelado = true; };
+  }, []);
 
   const escolherCat = (c) => {
     const nova = categoria?.nome === c?.nome ? null : c;
@@ -198,8 +213,10 @@ function Cartao({ prof, isTop, depth, onSwipe }) {
       <div className="p-5 flex-1 flex flex-col gap-3 overflow-hidden">
         <div>
           <div className="font-display text-[24px] font-bold tracking-tight leading-tight">{prof.nome}</div>
-          <div className="text-[13px] text-text-mute flex items-center gap-1 mt-0.5">
-            <Icon.Loc /> {prof.cidade} · {prof.servicosConcluidos} trabalhos feitos
+          <div className="text-[13px] text-text-mute flex items-center gap-1 mt-0.5 flex-wrap">
+            <Icon.Loc /> {prof.cidade}
+            {prof.distanciaKm != null && <span className="font-bold text-emerald-400">· a {String(prof.distanciaKm).replace('.', ',')} km de você</span>}
+            <span>· {prof.servicosConcluidos} trabalhos</span>
           </div>
         </div>
 

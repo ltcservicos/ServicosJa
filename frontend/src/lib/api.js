@@ -67,7 +67,13 @@ class ApiClient {
   meusInteresses()        { return this.request('GET', '/aceites/meus'); }
 
   // === CONTRATANTE: buscar profissionais (marketplace reverso) ===
-  profissionais(categoria) { return this.request('GET', `/profissionais${categoria ? `?categoria=${encodeURIComponent(categoria)}` : ''}`); }
+  profissionais(categoria, pos) {
+    const q = new URLSearchParams();
+    if (categoria) q.set('categoria', categoria);
+    if (pos?.lat != null && pos?.lng != null) { q.set('lat', pos.lat); q.set('lng', pos.lng); if (pos.raioKm) q.set('raioKm', pos.raioKm); }
+    const s = q.toString();
+    return this.request('GET', `/profissionais${s ? `?${s}` : ''}`);
+  }
   curtirProfissional(id)   { return this.request('POST', `/profissionais/${id}/curtir`); }
   pularProfissional(id)    { return this.request('POST', `/profissionais/${id}/pular`); }
 

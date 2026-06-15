@@ -18,6 +18,24 @@ export class AuthService {
     return (n || '').replace(/\D/g, '');
   }
 
+  // Geocodifica cidade (+ bairro) p/ ter a distância na busca de profissionais. Não bloqueia o cadastro.
+  private async _geocode(cidade: string, bairro?: string): Promise<{ lat: number; lng: number } | null> {
+    const tentativas = [bairro ? `${bairro}, ${cidade}, Brasil` : '', `${cidade}, Brasil`].filter(Boolean);
+    for (const q of tentativas) {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 5000);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`,
+          { headers: { 'User-Agent': 'ServicoJa/1.0' }, signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) continue;
+        const data: any = await res.json();
+        if (data?.[0]?.lat) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+      } catch {}
+    }
+    return null;
+  }
+
   async signup(dto: SignupDto) {
     const whatsapp = this._normalizaWpp(dto.whatsapp);
     if (whatsapp.length < 10) {
@@ -33,6 +51,9 @@ export class AuthService {
     }
 
     const senhaHash = await bcrypt.hash(dto.senha, 10);
+
+    // Prestador: geocodifica p/ aparecer com distância na busca de profissionais
+    const coords = dto.tipo === 'prestador' ? await this._geocode(dto.cidade, dto.bairros?.[0]) : null;
 
     const user = await this.prisma.usuario.create({
       data: {
@@ -51,6 +72,8 @@ export class AuthService {
         foto: dto.foto || null,
         categorias: dto.categorias?.join(',') || null,
         bairros: dto.bairros?.join(',') || null,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
         // MVP: aprovação automática; trocar por fluxo de verificação real depois
         statusVerificacao: 'APROVADO',
       },

@@ -47,6 +47,7 @@ async function main() {
       statusVerificacao: 'APROVADO',
       notaMedia: 4.8,
       totalAvaliacoes: 23,
+      lat: -23.5617, lng: -46.7022, // Pinheiros
     },
   });
 
@@ -66,15 +67,16 @@ async function main() {
       statusVerificacao: 'APROVADO',
       notaMedia: 4.9,
       totalAvaliacoes: 35,
+      lat: -23.5430, lng: -46.6850, // Perdizes
     },
   });
 
   // Mais profissionais para a busca por profissionais ter conteúdo
   const maisProfs = [
-    { nome: 'Ana Beatriz', wpp: '5511988880004', cats: 'Limpeza pesada,Jardinagem', desc: 'Diarista e faxina pesada. Caprichosa e pontual, referências comprovadas.', concl: 64, nota: 4.9, av: 52, bairros: 'Santana,Tucuruvi,Vila Maria' },
-    { nome: 'Roberto Souza', wpp: '5511988880005', cats: 'Elétrica,Ar-condicionado e refrigeração', desc: 'Eletricista predial e instalação/limpeza de ar-condicionado split. Atendo emergências.', concl: 33, nota: 4.7, av: 19, bairros: 'Tatuapé,Mooca,Penha' },
-    { nome: 'José Carlos', wpp: '5511988880006', cats: 'Pintura,Pedreiro e reformas pequenas', desc: 'Pintor e pedreiro com 15 anos de estrada. Reformas pequenas e acabamento fino.', concl: 88, nota: 5.0, av: 71, bairros: 'Guarulhos,Vila Galvão,Bonsucesso' },
-    { nome: 'Fernanda Dias', wpp: '5511988880007', cats: 'Chaveiro,Reparos em eletrodomésticos', desc: 'Chaveira 24h e conserto de eletrodomésticos. Rápida e honesta.', concl: 27, nota: 4.6, av: 14, bairros: 'Centro,Bela Vista,Sé' },
+    { nome: 'Ana Beatriz', wpp: '5511988880004', cats: 'Limpeza pesada,Jardinagem', desc: 'Diarista e faxina pesada. Caprichosa e pontual, referências comprovadas.', concl: 64, nota: 4.9, av: 52, bairros: 'Santana,Tucuruvi,Vila Maria', lat: -23.5000, lng: -46.6280 },
+    { nome: 'Roberto Souza', wpp: '5511988880005', cats: 'Elétrica,Ar-condicionado e refrigeração', desc: 'Eletricista predial e instalação/limpeza de ar-condicionado split. Atendo emergências.', concl: 33, nota: 4.7, av: 19, bairros: 'Tatuapé,Mooca,Penha', lat: -23.5400, lng: -46.5760 },
+    { nome: 'José Carlos', wpp: '5511988880006', cats: 'Pintura,Pedreiro e reformas pequenas', desc: 'Pintor e pedreiro com 15 anos de estrada. Reformas pequenas e acabamento fino.', concl: 88, nota: 5.0, av: 71, bairros: 'Guarulhos,Vila Galvão,Bonsucesso', lat: -23.4540, lng: -46.5330 },
+    { nome: 'Fernanda Dias', wpp: '5511988880007', cats: 'Chaveiro,Reparos em eletrodomésticos', desc: 'Chaveira 24h e conserto de eletrodomésticos. Rápida e honesta.', concl: 27, nota: 4.6, av: 14, bairros: 'Centro,Bela Vista,Sé', lat: -23.5510, lng: -46.6440 },
   ];
   for (const p of maisProfs) {
     await prisma.usuario.create({
@@ -82,6 +84,7 @@ async function main() {
         tipo: 'prestador', nome: p.nome, senhaHash, whatsapp: p.wpp, cidade: 'São Paulo',
         descricao: p.desc, categorias: p.cats, bairros: p.bairros,
         servicosConcluidos: p.concl, statusVerificacao: 'APROVADO', notaMedia: p.nota, totalAvaliacoes: p.av,
+        lat: p.lat, lng: p.lng,
       },
     });
   }

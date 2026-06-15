@@ -6,7 +6,17 @@ import { EventosService } from '../eventos/eventos.service';
 export class ProfissionaisService {
   constructor(private prisma: PrismaService, private eventos: EventosService) {}
 
-  private _perfil(u: any) {
+  // distância em km entre dois pontos (haversine)
+  private _distanciaKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const rad = (x: number) => (x * Math.PI) / 180;
+    const R = 6371;
+    const dLat = rad(lat2 - lat1);
+    const dLng = rad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  private _perfil(u: any, distanciaKm: number | null = null) {
     return {
       id: u.id,
       nome: u.nome,
@@ -18,11 +28,12 @@ export class ProfissionaisService {
       notaMedia: u.notaMedia,
       totalAvaliacoes: u.totalAvaliacoes,
       servicosConcluidos: u.servicosConcluidos,
+      distanciaKm,
     };
   }
 
   // Lista profissionais de uma área para o contratante navegar (swipe)
-  async listar(contratanteId: string, categoria?: string) {
+  async listar(contratanteId: string, categoria?: string, lat?: number, lng?: number, raioKm?: number) {
     // Já curtidos/pulados por este contratante — não reaparecem
     const jaVistos = await this.prisma.interesseProfissional.findMany({
       where: { contratanteId },
@@ -43,11 +54,31 @@ export class ProfissionaisService {
     });
 
     // contains é "amplo" no SQLite (substring) — garante o match exato da categoria
-    const lista = categoria
+    let lista = categoria
       ? profs.filter((p) => (p.categorias ? p.categorias.split(',') : []).includes(categoria))
       : profs;
 
-    return lista.map((p) => this._perfil(p));
+    const temPos = typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+
+    let perfis = lista.map((p) => {
+      const dist = temPos && p.lat != null && p.lng != null
+        ? Math.round(this._distanciaKm(lat!, lng!, p.lat, p.lng) * 10) / 10
+        : null;
+      return this._perfil(p, dist);
+    });
+
+    if (temPos) {
+      if (raioKm && raioKm > 0) {
+        perfis = perfis.filter((p) => p.distanciaKm === null || p.distanciaKm <= raioKm);
+      }
+      perfis.sort((a, b) => {
+        if (a.distanciaKm === null) return 1;
+        if (b.distanciaKm === null) return -1;
+        return a.distanciaKm - b.distanciaKm;
+      });
+    }
+
+    return perfis;
   }
 
   // Contratante curte um profissional → registra interesse, cria conversa direta e avisa
