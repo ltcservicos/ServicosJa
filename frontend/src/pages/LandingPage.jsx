@@ -28,7 +28,7 @@ const DEMO_JOBS = [
    Realismo: status bar, tabbar do app, mãozinha que arrasta o cartão,
    "digitando…" no chat e tilt 3D suave seguindo o mouse. */
 const SWIPE_MS = 2700;
-const PICK_MS = 4200;
+const PICK_MS = 6000;
 const CHAT_MS = 5200;
 
 // Interessados que o contratante vê (com nota e preço proposto)
@@ -144,26 +144,45 @@ function PhoneDemo() {
             </div>
           )}
 
-          {/* FASE: contratante vê os interessados, com preços, e escolhe */}
+          {/* FASE: contratante vê os interessados, com preços, vê a avaliação e escolhe */}
           {isPick && (
             <div className="lp-int" key="int">
               <div className="lp-int-list">
                 {INTERESSADOS.map((p, idx) => (
                   <div key={p.ini} className={`lp-int-card lp-int-c${idx} ${idx === 0 ? 'lp-int-chosen' : ''}`}>
                     <div className="lp-int-av">{p.ini}</div>
-                    <div className="lp-int-info">
-                      <div className="lp-int-name">{p.nome}</div>
-                      <div className="lp-int-meta">⭐ {p.nota} · {p.trab} trabalhos · 📍 {p.dist}</div>
+                    <div className="lp-int-mid">
+                      <div className="lp-int-toprow">
+                        <span className="lp-int-name">{p.nome}</span>
+                        <span className="lp-int-preco">{p.preco}</span>
+                      </div>
+                      <div className="lp-int-botrow">
+                        <span className="lp-int-meta">⭐ {p.nota} · {p.trab} trab.</span>
+                        <span className="lp-int-actions">
+                          <span className={`lp-int-aval ${idx === 0 ? 'lp-aval-glow' : ''}`}>⭐ Avaliação</span>
+                          <span className="lp-int-btn">Conversar</span>
+                        </span>
+                      </div>
                     </div>
-                    <div className="lp-int-right">
-                      <div className="lp-int-preco">{p.preco}</div>
-                      <div className="lp-int-btn">Conversar</div>
-                      {idx === 0 && <div className="lp-int-tap">👆</div>}
-                    </div>
+                    {idx === 0 && <div className="lp-int-tap">👆</div>}
                   </div>
                 ))}
               </div>
-              <div className="lp-int-hint">Você decide quem chamar 👆</div>
+
+              {/* quadro de avaliação rápida do João (abre antes de escolher) */}
+              <div className="lp-aval">
+                <div className="lp-aval-head">
+                  <div className="lp-aval-av">JP</div>
+                  <div>
+                    <div className="lp-aval-name">João Pereira</div>
+                    <div className="lp-aval-stars"><b>★ 4,8</b> · 28 avaliações · 98% recomendam</div>
+                  </div>
+                </div>
+                <div className="lp-aval-item"><span className="lp-aval-rs">★★★★★</span> “Pintou meu apê impecável e super pontual!” <em>— Ana C.</em></div>
+                <div className="lp-aval-item"><span className="lp-aval-rs">★★★★★</span> “Caprichoso, deixou tudo limpo. Recomendo!” <em>— Pedro M.</em></div>
+              </div>
+
+              <div className="lp-int-hint">Veja a avaliação e escolha quem chamar 👆</div>
             </div>
           )}
 
@@ -310,6 +329,7 @@ export function LandingPage() {
             <a href="#como">Como funciona</a>
             <a href="#recursos">Recursos</a>
             <a href="#pro">Para profissionais</a>
+            <a href="/blog">Blog</a>
           </nav>
           <div className="lp-nav-cta">
             <Link to="/entrar" className="lp-btn lp-btn-ghost">Entrar</Link>
@@ -449,6 +469,7 @@ export function LandingPage() {
         <div className="lp-wrap lp-foot-in">
           <div className="lp-logo">Serviço<span>Já.</span></div>
           <div className="lp-foot-links">
+            <a href="/blog">Blog</a>
             <Link to="/entrar">Entrar</Link>
             <a href="#como">Como funciona</a>
             <a href="#recursos">Recursos</a>
@@ -654,30 +675,55 @@ body:has(.lp) #root { height:auto; min-height:100dvh; }
   border-radius:50%; display:flex; align-items:center; justify-content:center; }
 
 /* interessados (visão do contratante) */
-.lp-int { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; padding:6px 14px 10px; min-height:0; }
+.lp-int { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; padding:6px 14px 10px; min-height:0; position:relative; }
 .lp-int-list { display:flex; flex-direction:column; gap:9px; }
 .lp-int-card { display:flex; align-items:center; gap:9px; background:var(--surf); border:1.5px solid var(--bd);
-  border-radius:16px; padding:9px 10px; opacity:0; transform:translateY(10px); }
+  border-radius:16px; padding:9px 10px; opacity:0; transform:translateY(10px); position:relative; }
 .lp-int-c0 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .25s forwards; }
 .lp-int-c1 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .45s forwards; }
 .lp-int-c2 { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .65s forwards; }
 .lp-int-av { width:38px; height:38px; border-radius:50%; background:linear-gradient(135deg,var(--surf2),#3a3a46);
   display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px; flex-shrink:0; }
-.lp-int-info { flex:1; min-width:0; }
+.lp-int-mid { flex:1; min-width:0; }
+.lp-int-toprow { display:flex; align-items:baseline; justify-content:space-between; gap:6px; }
 .lp-int-name { font-weight:700; font-size:13.5px; }
-.lp-int-meta { color:var(--mut); font-size:10px; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.lp-int-right { text-align:right; flex-shrink:0; position:relative; }
-.lp-int-preco { font-family:'Bricolage Grotesque'; font-weight:800; font-size:15px; color:var(--lime); line-height:1; }
-.lp-int-btn { margin-top:5px; font-size:10.5px; font-weight:700; color:var(--dim); border:1px solid var(--bd); border-radius:8px; padding:3px 9px; }
-/* o escolhido acende e o botão vira lime */
-.lp-int-chosen { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .25s forwards, lp-choose .5s ease 2.2s forwards; }
+.lp-int-preco { font-family:'Bricolage Grotesque'; font-weight:800; font-size:15px; color:var(--lime); line-height:1; flex-shrink:0; }
+.lp-int-botrow { display:flex; align-items:center; justify-content:space-between; gap:6px; margin-top:5px; }
+.lp-int-meta { color:var(--mut); font-size:10px; white-space:nowrap; }
+.lp-int-actions { display:flex; gap:5px; flex-shrink:0; }
+.lp-int-aval { font-size:10px; font-weight:700; color:var(--lime); border:1px solid rgba(214,255,58,.4); border-radius:8px; padding:3px 7px; }
+.lp-aval-glow { animation:lp-aval-glow 1.4s ease .8s; }
+@keyframes lp-aval-glow { 0%,100%{box-shadow:none} 40%,60%{box-shadow:0 0 0 3px rgba(214,255,58,.25)} }
+.lp-int-btn { font-size:10px; font-weight:700; color:var(--dim); border:1px solid var(--bd); border-radius:8px; padding:3px 8px; }
+/* o escolhido acende e o botão vira lime — depois que a avaliação fecha (~4.2s) */
+.lp-int-chosen { animation:lp-pop .4s cubic-bezier(.2,.8,.2,1) .25s forwards, lp-choose .5s ease 4.2s forwards; }
 @keyframes lp-choose { to { border-color:var(--lime); box-shadow:0 0 0 1px var(--lime), 0 12px 30px rgba(214,255,58,.16); transform:scale(1.025); } }
-.lp-int-chosen .lp-int-btn { animation:lp-btn-glow .4s ease 2.4s forwards; }
+.lp-int-chosen .lp-int-btn { animation:lp-btn-glow .4s ease 4.4s forwards; }
 @keyframes lp-btn-glow { to { background:var(--lime); color:#0E0E10; border-color:var(--lime); } }
-.lp-int-tap { position:absolute; right:-2px; bottom:-20px; font-size:25px; opacity:0; z-index:6; pointer-events:none;
-  filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); animation:lp-int-tap 1.3s ease 2.1s forwards; }
-@keyframes lp-int-tap { 0%{opacity:0; transform:translateY(10px) scale(1.1)} 28%{opacity:1; transform:translateY(0) scale(1)} 44%{transform:translateY(-3px) scale(.88)} 60%{transform:translateY(0) scale(1)} 100%{opacity:0} }
+.lp-int-tap { position:absolute; right:8px; bottom:-16px; font-size:24px; opacity:0; z-index:7; pointer-events:none;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.5)); animation:lp-int-tap 1.2s ease 4.1s forwards; }
+@keyframes lp-int-tap { 0%{opacity:0; transform:translateY(10px) scale(1.1)} 30%{opacity:1; transform:translateY(0) scale(1)} 48%{transform:translateY(-3px) scale(.86)} 64%{transform:translateY(0) scale(1)} 100%{opacity:0} }
 .lp-int-hint { text-align:center; color:var(--mut); font-size:11px; font-weight:600; margin-top:auto; padding-top:10px; }
+
+/* quadro de avaliação rápida — sobe, fica, desce (dentro da fase de 6s) */
+.lp-aval { position:absolute; left:12px; right:12px; bottom:6px; background:var(--soft); border:1px solid var(--lime);
+  border-radius:18px; padding:13px 14px; z-index:8; box-shadow:0 -10px 40px rgba(0,0,0,.5), 0 0 0 1px rgba(214,255,58,.15);
+  transform:translateY(130%); opacity:0; animation:lp-aval-seq 6000ms ease forwards; }
+@keyframes lp-aval-seq {
+  0%,17% { transform:translateY(130%); opacity:0; }
+  25% { transform:translateY(0); opacity:1; }
+  60% { transform:translateY(0); opacity:1; }
+  68%,100% { transform:translateY(130%); opacity:0; }
+}
+.lp-aval-head { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+.lp-aval-av { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--surf2),#3a3a46);
+  display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px; }
+.lp-aval-name { font-weight:700; font-size:14px; }
+.lp-aval-stars { font-size:10.5px; color:var(--mut); margin-top:1px; }
+.lp-aval-stars b { color:var(--lime); }
+.lp-aval-item { font-size:10.5px; color:var(--dim); line-height:1.4; margin-top:7px; }
+.lp-aval-item em { color:var(--mut); font-style:normal; }
+.lp-aval-rs { color:#FACC15; letter-spacing:1px; }
 
 /* chat */
 .lp-chat { flex:1; display:flex; flex-direction:column; animation:lp-fade .4s ease; min-height:0; }
