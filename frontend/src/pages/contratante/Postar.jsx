@@ -14,7 +14,8 @@ export function Postar() {
   const navigate = useNavigate();
   const toast = useToast();
   const { user } = useSession();
-  const fileRef = useRef(null);
+  const fileRef = useRef(null);    // galeria
+  const cameraRef = useRef(null);  // câmera (capture)
 
   const [step, setStep] = useState(1);
   const [categoria, setCategoria] = useState(null);
@@ -135,31 +136,48 @@ export function Postar() {
               <label className="block text-[13px] text-text-dim mb-1.5 font-semibold">
                 Foto do problema (opcional, mas ajuda muito)
               </label>
-              <div className="flex gap-2.5">
-                {fotos.map((f, i) => (
-                  <div
-                    key={i}
-                    className="w-[88px] h-[88px] rounded-xl border-2 bg-cover bg-center relative"
-                    style={{ backgroundImage: `url('${f}')`, borderColor: 'var(--accent)' }}
+
+              {/* miniaturas das fotos já escolhidas */}
+              {fotos.length > 0 && (
+                <div className="flex gap-2.5 mb-2.5">
+                  {fotos.map((f, i) => (
+                    <div
+                      key={i}
+                      className="w-[88px] h-[88px] rounded-xl border-2 bg-cover bg-center relative"
+                      style={{ backgroundImage: `url('${f}')`, borderColor: 'var(--accent)' }}
+                    >
+                      <button
+                        onClick={() => setFotos(fotos.filter((_, idx) => idx !== i))}
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-base font-bold"
+                        aria-label="Remover foto"
+                      >×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* dois caminhos claros: câmera (abre direto) ou galeria */}
+              {fotos.length < 3 && (
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={() => cameraRef.current?.click()}
+                    className="flex-1 min-h-[52px] rounded-xl bg-surface border border-border flex items-center justify-center gap-2 text-[14px] font-semibold text-text-main active:scale-95 transition"
                   >
-                    <button
-                      onClick={() => setFotos(fotos.filter((_, idx) => idx !== i))}
-                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-base font-bold"
-                      aria-label="Remover foto"
-                    >×</button>
-                  </div>
-                ))}
-                {fotos.length < 3 && (
+                    <Icon.Camera /> Tirar foto
+                  </button>
                   <button
                     onClick={() => fileRef.current?.click()}
-                    className="w-[88px] h-[88px] rounded-xl bg-surface border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-text-mute active:scale-95 transition"
+                    className="flex-1 min-h-[52px] rounded-xl bg-surface border border-border flex items-center justify-center gap-2 text-[14px] font-semibold text-text-dim active:scale-95 transition"
                   >
-                    <Icon.Camera />
-                    <span className="text-[11px] font-semibold">Foto</span>
+                    🖼️ Galeria
                   </button>
-                )}
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={addFoto} />
-              </div>
+                </div>
+              )}
+
+              {/* câmera: capture abre a câmera traseira direto no celular */}
+              <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={addFoto} />
+              {/* galeria: sem capture, deixa escolher arquivo/foto existente */}
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={addFoto} />
             </div>
 
             {/* Revisão compacta */}
