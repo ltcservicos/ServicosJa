@@ -39,6 +39,18 @@ export class AdminController {
     return this.admin.postarExterno(body);
   }
 
+  @Post('varrer')
+  @UseGuards(AdminGuard)
+  varrer(@Body() body: { cidades?: string[] }) {
+    return this.admin.iniciarVarredura(body?.cidades);
+  }
+
+  @Get('varrer/status')
+  @UseGuards(AdminGuard)
+  varrerStatus() {
+    return this.admin.statusVarredura();
+  }
+
   @Get('externos')
   @UseGuards(AdminGuard)
   listar() {

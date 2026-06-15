@@ -1,8 +1,12 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 const UA =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
+
+// Cidades padrão da varredura automática (grandes centros). O admin pode passar outras.
+const CIDADES_PADRAO = ['São Paulo', 'Guarulhos', 'Rio de Janeiro', 'Belo Horizonte', 'Curitiba'];
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Nossas categorias → termo de busca no empregos.com.br
 const TERMO_BUSCA: Record<string, string> = {
@@ -68,10 +72,31 @@ function extrairWhatsapp(texto: string): string | null {
 }
 
 @Injectable()
-export class AdminService {
+export class AdminService implements OnModuleInit {
   private readonly log = new Logger('AdminService');
+  private varrendo = false;                 // trava: uma varredura por vez
+  private ultimaVarredura: any = null;       // resumo da última varredura
+  private ultimoDiaCron = '';                // controle do cron diário
 
   constructor(private prisma: PrismaService) {}
+
+  // Cron diário (~4h da manhã): varre as cidades padrão + as que já têm trabalho importado
+  onModuleInit() {
+    const tick = async () => {
+      const agora = new Date();
+      const dia = agora.toISOString().slice(0, 10);
+      if (agora.getHours() === 4 && this.ultimoDiaCron !== dia && !this.varrendo) {
+        this.ultimoDiaCron = dia;
+        const extras = await this.prisma.servico.findMany({
+          where: { origem: 'EXTERNO' }, select: { cidade: true }, distinct: ['cidade'], take: 20,
+        });
+        const cidades = Array.from(new Set([...CIDADES_PADRAO, ...extras.map((e) => e.cidade)]));
+        this.log.log(`🌙 Varredura automática diária em ${cidades.length} cidades`);
+        this.varrerAsync(cidades);
+      }
+    };
+    setInterval(tick, 30 * 60000); // checa a cada 30 min
+  }
 
   private async fetchTexto(url: string, ms = 12000): Promise<string | null> {
     try {
@@ -229,6 +254,56 @@ export class AdminService {
       somenteWhatsapp,
       itens,
     };
+  }
+
+  // === Varredura geral: todas as categorias × várias cidades ===
+  // Dispara em background e responde na hora (não trava o navegador).
+  iniciarVarredura(cidades?: string[]) {
+    if (this.varrendo) {
+      return { ok: false, jaRodando: true, mensagem: 'Já existe uma varredura em andamento.' };
+    }
+    const lista = (cidades && cidades.length ? cidades : CIDADES_PADRAO)
+      .map((c) => c.trim()).filter(Boolean).slice(0, 12);
+    this.varrerAsync(lista);
+    return {
+      ok: true,
+      iniciada: true,
+      cidades: lista,
+      categorias: Object.keys(TERMO_BUSCA).length,
+      mensagem: `Varrendo ${Object.keys(TERMO_BUSCA).length} categorias em ${lista.length} cidade(s). Os trabalhos vão aparecendo na aba "Publicados".`,
+    };
+  }
+
+  async varrerAsync(cidades: string[]) {
+    this.varrendo = true;
+    const inicio = Date.now();
+    let publicadas = 0, varridas = 0, comWhatsapp = 0;
+    try {
+      for (const cidade of cidades) {
+        for (const categoria of Object.keys(TERMO_BUSCA)) {
+          try {
+            const r = await this.importarEmpregos({ categoria, cidade, somenteWhatsapp: true, limite: 8 });
+            publicadas += r.publicadas || 0;
+            comWhatsapp += r.comWhatsapp || 0;
+            varridas += r.naCidade || 0;
+          } catch {}
+          await sleep(800); // educado com o site-fonte
+        }
+      }
+    } finally {
+      this.varrendo = false;
+      this.ultimaVarredura = {
+        em: new Date().toISOString(),
+        cidades,
+        varridas, comWhatsapp, publicadas,
+        duracaoSeg: Math.round((Date.now() - inicio) / 1000),
+      };
+      this.log.log(`✅ Varredura concluída: ${publicadas} publicadas (${comWhatsapp} c/ WhatsApp) em ${cidades.length} cidades`);
+    }
+  }
+
+  statusVarredura() {
+    return { varrendo: this.varrendo, ultima: this.ultimaVarredura };
   }
 
   // === Post manual de trabalho externo (caminho garantido, com WhatsApp) ===

@@ -112,6 +112,8 @@ class AdminApi {
   login(usuario, senha) { return this.request('POST', '/login', { usuario, senha }); }
   resumo()              { return this.request('GET', '/resumo'); }
   importar(body)        { return this.request('POST', '/importar', body); }
+  varrer(cidades)       { return this.request('POST', '/varrer', { cidades }); }
+  varrerStatus()        { return this.request('GET', '/varrer/status'); }
   postarExterno(body)   { return this.request('POST', '/externo', body); }
   externos()            { return this.request('GET', '/externos'); }
   remover(id)           { return this.request('DELETE', `/externos/${id}`); }

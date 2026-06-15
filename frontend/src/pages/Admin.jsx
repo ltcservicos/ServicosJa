@@ -131,9 +131,11 @@ function Importar({ onFeito, onErro }) {
   };
 
   return (
+    <div className="flex flex-col gap-4">
+    <Varredura onFlash={onFeito} onErro={onErro} />
     <div className="bg-surface border border-border rounded-2xl p-5 flex flex-col gap-4">
       <div>
-        <div className="font-bold text-[17px] mb-1">Importar do empregos.com.br</div>
+        <div className="font-bold text-[17px] mb-1">Importar 1 categoria + cidade</div>
         <div className="text-text-mute text-[13.5px] leading-relaxed">
           Busca vagas do segmento na cidade e publica as que têm WhatsApp do contratante na descrição.
           Quando o trabalhador curtir, o app abre o WhatsApp direto.
@@ -168,6 +170,67 @@ function Importar({ onFeito, onErro }) {
         <div className="text-[13px] text-text-dim bg-bg border border-border rounded-xl p-3 leading-relaxed">
           <b>{result.encontradas}</b> vagas no resultado · <b>{result.naCidade}</b> em {result.cidade} ·{' '}
           <b>{result.comWhatsapp}</b> com WhatsApp · <b className="text-emerald-400">{result.publicadas}</b> publicadas
+        </div>
+      )}
+    </div>
+    </div>
+  );
+}
+
+/* Varredura geral: todas as categorias × várias cidades, em background */
+function Varredura({ onFlash, onErro }) {
+  const [cidades, setCidades] = useState('São Paulo, Guarulhos, Rio de Janeiro, Belo Horizonte, Curitiba');
+  const [status, setStatus] = useState(null);
+
+  const carregar = () => adminApi.varrerStatus().then(setStatus).catch(() => {});
+  useEffect(() => {
+    carregar();
+    const id = setInterval(carregar, 8000);
+    return () => clearInterval(id);
+  }, []);
+
+  const varrer = async () => {
+    const lista = cidades.split(',').map((c) => c.trim()).filter(Boolean);
+    if (!lista.length) { onErro('Informe ao menos uma cidade'); return; }
+    try {
+      const r = await adminApi.varrer(lista);
+      if (r.jaRodando) { onErro('Já tem uma varredura rodando — aguarde terminar.'); return; }
+      onFlash(r.mensagem);
+      carregar();
+    } catch (e) { onErro(e.message); }
+  };
+
+  return (
+    <div className="bg-surface border border-accent/40 rounded-2xl p-5 flex flex-col gap-3"
+      style={{ background: 'linear-gradient(135deg, rgba(214,255,58,.06), transparent)' }}>
+      <div>
+        <div className="font-bold text-[17px] mb-1">🌎 Varredura geral (automática)</div>
+        <div className="text-text-mute text-[13.5px] leading-relaxed">
+          Varre <b>todas as categorias</b> nas cidades abaixo e publica tudo que tiver WhatsApp.
+          Roda também <b>sozinha toda madrugada</b> (~4h). Os trabalhos aparecem na aba "Publicados".
+        </div>
+      </div>
+
+      <Campo label="Cidades (separadas por vírgula)">
+        <textarea value={cidades} onChange={(e) => setCidades(e.target.value)}
+          className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-[14px] outline-none focus:border-accent resize-none min-h-[60px]" />
+      </Campo>
+
+      {status?.varrendo ? (
+        <div className="min-h-[48px] rounded-xl bg-bg border border-border flex items-center justify-center gap-2 text-[14px] font-bold text-accent">
+          <span className="animate-pulse">⏳ Varrendo agora… pode fechar a tela, continua rodando</span>
+        </div>
+      ) : (
+        <button onClick={varrer} className="min-h-[48px] rounded-xl font-bold text-[15px] bg-accent text-bg">
+          🚀 Varrer todas as categorias agora
+        </button>
+      )}
+
+      {status?.ultima && (
+        <div className="text-[12.5px] text-text-dim bg-bg border border-border rounded-xl p-3 leading-relaxed">
+          Última varredura: <b className="text-emerald-400">{status.ultima.publicadas}</b> publicadas ·{' '}
+          {status.ultima.comWhatsapp} com WhatsApp · {status.ultima.cidades.length} cidades ·{' '}
+          {status.ultima.duracaoSeg}s
         </div>
       )}
     </div>
