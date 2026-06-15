@@ -19,7 +19,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
   // /api para a API; blog e arquivos de SEO ficam na raiz (server-rendered)
   app.setGlobalPrefix('api', {
-    exclude: ['blog', 'blog/:slug', 'sitemap.xml', 'robots.txt'],
+    exclude: ['blog', 'blog/:slug', 'servico', 'servico/:slug', 'sitemap.xml', 'robots.txt'],
   });
 
   const port = process.env.PORT || 3000;

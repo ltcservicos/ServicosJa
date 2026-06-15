@@ -329,6 +329,7 @@ export function LandingPage() {
             <a href="#como">Como funciona</a>
             <a href="#recursos">Recursos</a>
             <a href="#pro">Para profissionais</a>
+            <a href="/servico">Serviços</a>
             <a href="/blog">Blog</a>
           </nav>
           <div className="lp-nav-cta">
@@ -469,10 +470,10 @@ export function LandingPage() {
         <div className="lp-wrap lp-foot-in">
           <div className="lp-logo">Serviço<span>Já.</span></div>
           <div className="lp-foot-links">
+            <a href="/servico">Serviços por cidade</a>
             <a href="/blog">Blog</a>
             <Link to="/entrar">Entrar</Link>
             <a href="#como">Como funciona</a>
-            <a href="#recursos">Recursos</a>
           </div>
           <div className="lp-foot-copy">Feito no Brasil 🇧🇷 · ServiçoJá</div>
         </div>

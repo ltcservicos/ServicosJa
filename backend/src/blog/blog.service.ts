@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { KEYWORDS, KeywordSeed } from './keywords';
+import { CATEGORIAS as LOC_CATS, CIDADES as LOC_CIDADES, slugLocal } from '../locais/locais.data';
 
 const SITE = process.env.SITE_URL || 'http://76.13.230.109:8080';
 
@@ -238,10 +239,16 @@ export class BlogService implements OnModuleInit {
 
   async sitemap(): Promise<string> {
     const posts = await this.publicados();
+    // páginas serviço × cidade (geradas, sempre presentes)
+    const locais: { loc: string; pri: string }[] = [{ loc: `${SITE}/servico`, pri: '0.8' }];
+    for (const cat of LOC_CATS) for (const cid of LOC_CIDADES) {
+      locais.push({ loc: `${SITE}/servico/${slugLocal(cat, cid)}`, pri: '0.7' });
+    }
     const urls = [
       { loc: `${SITE}/`, pri: '1.0' },
       { loc: `${SITE}/blog`, pri: '0.8' },
       ...posts.map((p) => ({ loc: `${SITE}/blog/${p.slug}`, pri: '0.7', lastmod: new Date(p.publishAt).toISOString().slice(0, 10) })),
+      ...locais,
     ];
     return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
       urls.map((u: any) => `  <url><loc>${u.loc}</loc>${u.lastmod ? `<lastmod>${u.lastmod}</lastmod>` : ''}<priority>${u.pri}</priority></url>`).join('\n') +
