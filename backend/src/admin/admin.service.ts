@@ -119,16 +119,22 @@ const FONTE_INFOJOBS: Fonte = {
     'Chaveiro': 'chaveiro',
     'Ar-condicionado e refrigeração': 'refrigeracao',
   },
-  listaUrl: (termo) => `https://www.infojobs.com.br/empregos.aspx?palabra=${termo}`,
+  // a própria infojobs filtra a cidade na URL (empregos-em-{cidade}.aspx)
+  listaUrl: (termo, citySlug) =>
+    citySlug
+      ? `https://www.infojobs.com.br/empregos-em-${citySlug}.aspx?palabra=${termo}`
+      : `https://www.infojobs.com.br/empregos.aspx?palabra=${termo}`,
   extrair: (html, citySlug) => {
-    // links de vaga: /vaga-de-{slug-com-cidade}__{id}.aspx
+    // links de vaga: /vaga-de-{slug}__{id}.aspx
     const todos = Array.from(html.matchAll(/\/vaga-de-([a-z0-9-]+)__(\d+)\.aspx/g)).map((m) => ({
       url: `https://www.infojobs.com.br/vaga-de-${m[1]}__${m[2]}.aspx`, slug: m[1],
     }));
     const unicos = Array.from(new Map(todos.map((v) => [v.url, v])).values());
-    // a cidade/região vem no slug: ...-em-{cidade}
+    // o slug da infojobs usa a REGIÃO (ex: -em-sao-paulo até pra Guarulhos).
+    // Tenta casar a cidade exata; se zerar, usa o resultado da URL já filtrada
+    // por cidade (enviesado pra cidade pedida).
     const naCidade = unicos.filter((v) => v.slug.includes(`-em-${citySlug}`) || v.slug.includes(`-${citySlug}-`));
-    return naCidade.length ? naCidade : [];
+    return naCidade.length ? naCidade : unicos.slice(0, 12);
   },
   parse: (html, slug, termo, cidade) => {
     const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
