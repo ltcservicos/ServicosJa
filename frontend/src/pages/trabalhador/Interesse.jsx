@@ -40,10 +40,10 @@ export function Interesse() {
   if (servico.estado === 'ABERTO') {
     statusBlock = (
       <div className="bg-surface border border-border rounded-2xl p-5 text-center mt-4">
-        <div className="text-3xl">⏳</div>
-        <div className="font-bold mt-1.5 text-[16px]">O cliente está decidindo</div>
+        <div className="text-3xl">👍</div>
+        <div className="font-bold mt-1.5 text-[16px]">Interesse enviado!</div>
         <div className="text-[13.5px] text-text-mute mt-1 leading-relaxed">
-          Seu interesse foi enviado. Se o cliente quiser conversar, você recebe um aviso e a conversa aparece na aba Conversas.
+          Agora é com o cliente. Se ele topar, a gente te avisa e a conversa abre na aba Chat.
         </div>
       </div>
     );

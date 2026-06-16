@@ -119,6 +119,9 @@ export function Postar() {
                 placeholder="Com suas palavras. Ex: a torneira da cozinha está pingando há dois dias."
                 className="w-full bg-surface border border-border rounded-xl px-4 py-3.5 text-[16px] outline-none focus:border-[var(--accent)] resize-none min-h-[120px]"
               />
+              <div className="text-[12.5px] text-text-mute mt-1.5 leading-relaxed">
+                💡 Diga o <b>que está acontecendo</b>, em <b>qual cômodo</b> e há <b>quanto tempo</b>. Quanto mais claro, mais profissionais respondem.
+              </div>
             </div>
 
             <Button onClick={() => setStep(2)} disabled={!canStep1}>Próximo →</Button>

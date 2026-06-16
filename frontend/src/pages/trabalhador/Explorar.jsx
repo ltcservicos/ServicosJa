@@ -25,6 +25,7 @@ export function Explorar() {
     try { return JSON.parse(localStorage.getItem('servicoja_pos')) || null; } catch { return null; }
   });
   const [raio, setRaio] = useState(() => Number(localStorage.getItem('servicoja_raio')) || 0);
+  const [swipeHint, setSwipeHint] = useState(() => !localStorage.getItem('servicoja_swipe_hint'));
 
   const loadFeed = useCallback(async (p = pos, r = raio) => {
     try {
@@ -93,6 +94,7 @@ export function Explorar() {
   const onSwipe = (dir) => {
     const s = feed[idx];
     if (!s) return;
+    if (swipeHint) { setSwipeHint(false); localStorage.setItem('servicoja_swipe_hint', '1'); }
     setIdx((prev) => prev + 1);
     if (dir === 'yes') curtir(s);
     else api.pularTrabalho(s.id).catch(() => {});
@@ -199,28 +201,35 @@ export function Explorar() {
         </div>
 
         {feed && !empty && view === 'cards' && (
-          <div className="flex justify-center items-center gap-8 pt-4 flex-shrink-0">
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                onClick={() => onSwipe('no')}
-                className="w-[68px] h-[68px] rounded-full bg-surface border-2 border-red-500 text-red-500 flex items-center justify-center active:scale-90 transition"
-                aria-label="Não quero"
-              >
-                <Icon.X />
-              </button>
-              <span className="text-[12px] font-bold text-red-400">Não quero</span>
+          <>
+            <div className="flex justify-center items-center gap-8 pt-4 flex-shrink-0">
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  onClick={() => onSwipe('no')}
+                  className="w-[68px] h-[68px] rounded-full bg-surface border-2 border-red-500 text-red-500 flex items-center justify-center active:scale-90 transition"
+                  aria-label="Não quero"
+                >
+                  <Icon.X />
+                </button>
+                <span className="text-[12px] font-bold text-red-400">Não quero</span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5">
+                <button
+                  onClick={() => onSwipe('yes')}
+                  className="w-[68px] h-[68px] rounded-full bg-emerald-400 text-bg flex items-center justify-center active:scale-90 transition shadow-[0_8px_28px_rgba(52,211,153,0.35)]"
+                  aria-label="Tenho interesse"
+                >
+                  <Icon.Handshake />
+                </button>
+                <span className="text-[12px] font-bold text-emerald-400">Tenho interesse</span>
+              </div>
             </div>
-            <div className="flex flex-col items-center gap-1.5">
-              <button
-                onClick={() => onSwipe('yes')}
-                className="w-[68px] h-[68px] rounded-full bg-emerald-400 text-bg flex items-center justify-center active:scale-90 transition shadow-[0_8px_28px_rgba(52,211,153,0.35)]"
-                aria-label="Tenho interesse"
-              >
-                <Icon.Handshake />
-              </button>
-              <span className="text-[12px] font-bold text-emerald-400">Tenho interesse</span>
-            </div>
-          </div>
+            {swipeHint && (
+              <div className="text-center text-[12.5px] text-text-mute pt-2.5 flex-shrink-0">
+                👆 Arraste o cartão para os lados ou use os botões
+              </div>
+            )}
+          </>
         )}
       </div>
     </>

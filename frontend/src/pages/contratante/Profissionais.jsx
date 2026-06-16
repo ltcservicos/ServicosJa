@@ -97,6 +97,9 @@ export function Profissionais() {
                 style={{ background: 'var(--accent)', color: 'var(--accent-text)' }}>
                 Atualizar
               </button>
+              <button onClick={() => navigate('/contratar/postar')} className="text-[13.5px] font-semibold text-text-dim underline">
+                ou poste um trabalho e deixe que venham até você →
+              </button>
             </div>
           ) : (
             <Pilha lista={lista} idx={idx} onSwipe={onSwipe} />

@@ -87,7 +87,7 @@ export function Inicio() {
                         <span className={s.aceitesCount > 0 ? 'text-accent font-bold' : ''}>
                           {s.aceitesCount > 0
                             ? `🙋 ${s.aceitesCount} interessado${s.aceitesCount > 1 ? 's' : ''}!`
-                            : 'ninguém ainda'}
+                            : '👀 aguardando interessados'}
                         </span>
                       )}
                     </div>
