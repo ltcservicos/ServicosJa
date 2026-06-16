@@ -16,10 +16,11 @@ export function Profissionais() {
   const [lista, setLista] = useState(null);
   const [idx, setIdx] = useState(0);
   const [pos, setPos] = useState(null);
+  const [raio, setRaio] = useState(0); // 0 = qualquer distância
 
-  const carregar = async (cat = categoria, p = pos) => {
+  const carregar = async (cat = categoria, p = pos, r = raio) => {
     try {
-      const data = await api.profissionais(cat?.nome, p ? { lat: p.lat, lng: p.lng } : null);
+      const data = await api.profissionais(cat?.nome, p ? { lat: p.lat, lng: p.lng, raioKm: r || undefined } : null);
       setLista(data);
       setIdx(0);
     } catch (e) { toast(e.message, 'error'); }
@@ -45,6 +46,26 @@ export function Profissionais() {
     const nova = categoria?.nome === c?.nome ? null : c;
     setCategoria(nova);
     carregar(nova);
+  };
+
+  // Limita o raio de busca (precisa da localização do contratante)
+  const escolherRaio = async (km) => {
+    let p = pos;
+    if (km > 0 && !p) {
+      if (!navigator.geolocation) { toast('Seu celular não compartilha localização', 'error'); return; }
+      try {
+        p = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(
+            (r) => res({ lat: r.coords.latitude, lng: r.coords.longitude }),
+            () => rej(new Error('Não conseguimos sua localização. Libere o GPS e tente de novo.')),
+            { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+          ),
+        );
+        setPos(p);
+      } catch (e) { toast(e.message, 'error'); return; }
+    }
+    setRaio(km);
+    carregar(categoria, p, km);
   };
 
   const onSwipe = (dir) => {
@@ -80,6 +101,22 @@ export function Profissionais() {
             {c.icone} {c.curto}
           </button>
         ))}
+      </div>
+
+      {/* Filtro por distância */}
+      <div className="px-5 pb-2.5 flex gap-1.5 overflow-x-auto no-scrollbar flex-shrink-0">
+        {[2, 5, 10, 25].map((km) => (
+          <button key={km} onClick={() => escolherRaio(km)}
+            className="px-3 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap border flex-shrink-0"
+            style={raio === km ? { background: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'var(--accent)' } : { background: '#1E1E24', color: '#9C9CA8', borderColor: '#2E2E38' }}>
+            📍 {km} km
+          </button>
+        ))}
+        <button onClick={() => escolherRaio(0)}
+          className="px-3 py-2 rounded-xl text-[13px] font-bold whitespace-nowrap border flex-shrink-0"
+          style={raio === 0 ? { background: 'var(--accent)', color: 'var(--accent-text)', borderColor: 'var(--accent)' } : { background: '#1E1E24', color: '#9C9CA8', borderColor: '#2E2E38' }}>
+          Qualquer distância
+        </button>
       </div>
 
       <div className="flex-1 px-5 pb-4 pt-1 flex flex-col">

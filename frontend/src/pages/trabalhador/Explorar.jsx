@@ -26,6 +26,16 @@ export function Explorar() {
   });
   const [raio, setRaio] = useState(() => Number(localStorage.getItem('servicoja_raio')) || 0);
   const [swipeHint, setSwipeHint] = useState(() => !localStorage.getItem('servicoja_swipe_hint'));
+  const [tipo, setTipo] = useState('todos'); // 'todos' | 'esporadico' | 'contrato'
+
+  // Esporádico = pedido pontual de cliente (origem PROPRIO);
+  // Por contrato = vaga externa importada (origem EXTERNO).
+  const lista = (feed || []).filter((s) =>
+    tipo === 'todos' ? true : tipo === 'contrato' ? s.origem === 'EXTERNO' : s.origem !== 'EXTERNO',
+  );
+  const nEspor = (feed || []).filter((s) => s.origem !== 'EXTERNO').length;
+  const nContr = (feed || []).filter((s) => s.origem === 'EXTERNO').length;
+  const escolherTipo = (t) => { setTipo(t); setIdx(0); };
 
   const loadFeed = useCallback(async (p = pos, r = raio) => {
     try {
@@ -92,7 +102,7 @@ export function Explorar() {
   };
 
   const onSwipe = (dir) => {
-    const s = feed[idx];
+    const s = lista[idx];
     if (!s) return;
     if (swipeHint) { setSwipeHint(false); localStorage.setItem('servicoja_swipe_hint', '1'); }
     setIdx((prev) => prev + 1);
@@ -106,7 +116,15 @@ export function Explorar() {
     setFeed((prev) => (prev || []).filter((x) => x.id !== t.id));
   }, []);
 
-  const empty = feed && idx >= feed.length;
+  const empty = feed && idx >= lista.length;
+  const vazioTitulo = raio > 0 ? `Nada num raio de ${raio} km`
+    : tipo === 'esporadico' ? 'Nenhum pedido de cliente agora'
+    : tipo === 'contrato' ? 'Nenhuma vaga por contrato agora'
+    : 'Você viu tudo por hoje';
+  const vazioSub = raio > 0 ? 'Tente aumentar o raio ou toque em "Todos" para ver trabalhos de toda a cidade.'
+    : tipo === 'esporadico' ? 'Pedidos pontuais de clientes aparecem aqui. Enquanto isso, veja a aba 🤝 Contrato.'
+    : tipo === 'contrato' ? 'Vagas fixas aparecem aqui. Toque em atualizar para conferir.'
+    : 'Quando aparecer trabalho novo do seu ramo, ele chega aqui. Toque em atualizar para conferir.';
 
   return (
     <>
@@ -124,6 +142,26 @@ export function Explorar() {
           </div>
         }
       />
+
+      {/* Tipo de trabalho: esporádico (cliente) vs por contrato (vagas externas) */}
+      <div className="px-5 pt-1 pb-2 flex-shrink-0">
+        <div className="flex gap-1 bg-surface border border-border rounded-xl p-1">
+          {[
+            { k: 'todos', label: 'Tudo' },
+            { k: 'esporadico', label: `⚡ Esporádico${nEspor ? ` ${nEspor}` : ''}` },
+            { k: 'contrato', label: `🤝 Contrato${nContr ? ` ${nContr}` : ''}` },
+          ].map((t) => (
+            <button
+              key={t.k}
+              onClick={() => escolherTipo(t.k)}
+              className="flex-1 py-2 rounded-lg text-[12.5px] font-bold transition whitespace-nowrap"
+              style={tipo === t.k ? { background: 'var(--accent)', color: 'var(--accent-text)' } : { color: '#9C9CA8' }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Filtro por distância + alternar mapa */}
       <div className="px-5 pb-2.5 flex items-center gap-2 flex-shrink-0">
@@ -171,21 +209,19 @@ export function Explorar() {
         <div className="flex-1 relative">
           {!feed ? null : view === 'mapa' ? (
             <MapaTrabalhos
-              trabalhos={feed.slice(idx)}
+              trabalhos={lista.slice(idx)}
               pos={pos}
               raioKm={raio || null}
               onInteresse={interesseNoMapa}
             />
           ) : empty ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center gap-3.5 text-text-mute p-8">
-              <div className="text-5xl">🎉</div>
+              <div className="text-5xl">{tipo === 'contrato' ? '🤝' : tipo === 'esporadico' ? '⚡' : '🎉'}</div>
               <div className="font-display text-xl font-bold text-text-main">
-                {raio > 0 ? `Nada num raio de ${raio} km` : 'Você viu tudo por hoje'}
+                {vazioTitulo}
               </div>
               <div className="text-[14.5px] max-w-[260px] leading-relaxed">
-                {raio > 0
-                  ? 'Tente aumentar o raio ou toque em "Todos" para ver trabalhos de toda a cidade.'
-                  : 'Quando aparecer trabalho novo do seu ramo, ele chega aqui. Toque em atualizar para conferir.'}
+                {vazioSub}
               </div>
               <button
                 onClick={() => loadFeed()}
@@ -196,7 +232,7 @@ export function Explorar() {
               </button>
             </div>
           ) : (
-            <SwipeStack feed={feed} idx={idx} onSwipe={onSwipe} />
+            <SwipeStack feed={lista} idx={idx} onSwipe={onSwipe} />
           )}
         </div>
 
