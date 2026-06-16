@@ -11,7 +11,10 @@ function bundleAtual() {
 }
 
 export function UpdateBanner() {
-  const [novaVersao, setNovaVersao] = useState(false);
+  // ?nova-versao=1 força o banner (útil pra demonstrar/testar o visual)
+  const [novaVersao, setNovaVersao] = useState(() => {
+    try { return new URLSearchParams(window.location.search).has('nova-versao'); } catch { return false; }
+  });
 
   useEffect(() => {
     const atual = bundleAtual();
