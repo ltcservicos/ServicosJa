@@ -353,7 +353,7 @@ export function LandingPage() {
             </p>
             <div className="lp-hero-cta">
               <Link to="/cadastro?papel=contratante" className="lp-btn lp-btn-lime">🏠 Quero contratar</Link>
-              <Link to="/cadastro?papel=trabalhador" className="lp-btn lp-btn-blue">🛠️ Quero trabalhar</Link>
+              <Link to="/vagas" className="lp-btn lp-btn-blue">🛠️ Quero trabalhar</Link>
             </div>
             <div className="lp-trust">
               <div className="lp-stars">★★★★★</div>
@@ -447,7 +447,7 @@ export function LandingPage() {
               <span className="lp-kicker lp-kicker-blue">Você é profissional?</span>
               <h2 className="lp-h2 lp-h2-w">Receba trabalhos do<br/>seu bairro, sem prospecção.</h2>
               <p className="lp-sub">Nada de ligação fria. Os pedidos chegam até você — é só deslizar e curtir.</p>
-              <Link to="/cadastro?papel=trabalhador" className="lp-btn lp-btn-blue lp-mt">🛠️ Quero trabalhar</Link>
+              <Link to="/vagas" className="lp-btn lp-btn-blue lp-mt">🛠️ Quero trabalhar</Link>
             </div>
           </div>
         </div>
@@ -460,7 +460,7 @@ export function LandingPage() {
           <p className="lp-sub lp-cta-sub">Crie sua conta grátis em menos de 1 minuto.</p>
           <div className="lp-hero-cta lp-center">
             <Link to="/cadastro?papel=contratante" className="lp-btn lp-btn-lime">🏠 Quero contratar</Link>
-            <Link to="/cadastro?papel=trabalhador" className="lp-btn lp-btn-blue">🛠️ Quero trabalhar</Link>
+            <Link to="/vagas" className="lp-btn lp-btn-blue">🛠️ Quero trabalhar</Link>
           </div>
         </div>
       </section>

@@ -9,6 +9,7 @@ import { LandingPage } from './pages/LandingPage';
 import { Landing } from './pages/Landing';
 import { Entrar } from './pages/Entrar';
 import { Cadastro } from './pages/Cadastro';
+import { Vagas } from './pages/Vagas';
 
 import { ContratanteShell } from './shells/ContratanteShell';
 import { Inicio } from './pages/contratante/Inicio';
@@ -70,6 +71,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<PublicOnly><LandingPage /></PublicOnly>} />
             <Route path="/comecar" element={<PublicOnly><Landing /></PublicOnly>} />
+            <Route path="/vagas" element={<PublicOnly><Vagas /></PublicOnly>} />
             <Route path="/entrar" element={<PublicOnly><Entrar /></PublicOnly>} />
             <Route path="/cadastro" element={<PublicOnly><Cadastro /></PublicOnly>} />
             <Route path="/admin" element={<Admin />} />

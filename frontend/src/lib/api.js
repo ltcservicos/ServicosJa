@@ -53,6 +53,15 @@ class ApiClient {
   cancelarTrabalho(id)           { return this.request('POST', `/servicos/${id}/cancelar`); }
   avaliarTrabalho(id, nota, comentario) { return this.request('POST', `/servicos/${id}/avaliar`, { nota, comentario }); }
 
+  // === VITRINE PÚBLICA (sem login) ===
+  vitrine(cidade, categoria) {
+    const q = new URLSearchParams();
+    if (cidade) q.set('cidade', cidade);
+    if (categoria) q.set('categoria', categoria);
+    const s = q.toString();
+    return this.request('GET', `/vitrine${s ? `?${s}` : ''}`);
+  }
+
   // === TRABALHADOR ===
   feed(pos) {
     let q = '';

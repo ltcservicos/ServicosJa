@@ -443,6 +443,37 @@ export class ServicosService {
     return lista;
   }
 
+  // ---------------- vitrine pública (sem login): teaser de vagas ----------------
+  // Mostra as vagas pra atrair o profissional ANTES do cadastro. Devolve só o
+  // resumo (sem contato, descrição cortada) — o detalhe completo e o interesse
+  // ficam atrás do cadastro, pra não perder o usuário logo de cara.
+  async getVitrine(cidade?: string, categoria?: string) {
+    const where: any = { estado: ESTADO.ABERTO };
+    if (categoria) where.categoria = categoria;
+    if (cidade && cidade.trim()) where.cidade = { contains: cidade.trim() };
+
+    const rows = await this.prisma.servico.findMany({
+      where,
+      orderBy: { criadoEm: 'desc' },
+      take: 60,
+    });
+
+    return rows.map((s) => {
+      const desc = s.descricao || '';
+      return {
+        id: s.id,
+        titulo: s.titulo,
+        resumo: desc.length > 150 ? desc.slice(0, 150).trim() + '…' : desc,
+        categoria: s.categoria,
+        cidade: s.cidade,
+        bairro: s.bairro,
+        foto: (typeof s.fotos === 'string' ? s.fotos.split('|||').filter(Boolean) : s.fotos || [])[0] || null,
+        origem: s.origem, // PROPRIO = esporádico · EXTERNO = por contrato
+        criadoEm: s.criadoEm,
+      };
+    });
+  }
+
   // ---------------- prestador: aceitar (múltiplos aceites permitidos) ----------------
   async aceitar(servicoId: string, prestadorId: string, dto: AceitarServicoDto) {
     return this.prisma.$transaction(async (tx) => {
