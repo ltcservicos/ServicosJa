@@ -104,40 +104,43 @@ const FONTE_EMPREGOS: Fonte = {
   },
 };
 
-const FONTE_VAGAS: Fonte = {
-  id: 'vagas',
-  nome: 'vagas.com.br',
+const FONTE_INFOJOBS: Fonte = {
+  id: 'infojobs',
+  nome: 'infojobs.com.br',
   termos: {
     'Encanamento e hidráulica': 'encanador',
     'Elétrica': 'eletricista',
     'Pintura': 'pintor',
-    'Reparos em eletrodomésticos': 'tecnico-de-eletrodomesticos',
+    'Reparos em eletrodomésticos': 'eletrodomesticos',
     'Pedreiro e reformas pequenas': 'pedreiro',
     'Marcenaria e montagem de móveis': 'marceneiro',
-    'Limpeza pesada': 'auxiliar-de-limpeza',
+    'Limpeza pesada': 'faxineiro',
     'Jardinagem': 'jardineiro',
     'Chaveiro': 'chaveiro',
-    'Ar-condicionado e refrigeração': 'tecnico-de-refrigeracao',
+    'Ar-condicionado e refrigeração': 'refrigeracao',
   },
-  // vagas.com.br filtra a cidade na própria URL
-  listaUrl: (termo, citySlug) =>
-    citySlug ? `https://www.vagas.com.br/vagas-de-${termo}-em-${citySlug}` : `https://www.vagas.com.br/vagas-de-${termo}`,
-  extrair: (html) => {
-    const todos = Array.from(html.matchAll(/\/vagas\/(v\d+)\/([a-z0-9-]+)/g)).map((m) => ({
-      url: `https://www.vagas.com.br/vagas/${m[1]}/${m[2]}`, slug: m[2],
+  listaUrl: (termo) => `https://www.infojobs.com.br/empregos.aspx?palabra=${termo}`,
+  extrair: (html, citySlug) => {
+    // links de vaga: /vaga-de-{slug-com-cidade}__{id}.aspx
+    const todos = Array.from(html.matchAll(/\/vaga-de-([a-z0-9-]+)__(\d+)\.aspx/g)).map((m) => ({
+      url: `https://www.infojobs.com.br/vaga-de-${m[1]}__${m[2]}.aspx`, slug: m[1],
     }));
-    return Array.from(new Map(todos.map((v) => [v.url, v])).values());
+    const unicos = Array.from(new Map(todos.map((v) => [v.url, v])).values());
+    // a cidade/região vem no slug: ...-em-{cidade}
+    const naCidade = unicos.filter((v) => v.slug.includes(`-em-${citySlug}`) || v.slug.includes(`-${citySlug}-`));
+    return naCidade.length ? naCidade : [];
   },
   parse: (html, slug, termo, cidade) => {
     const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
-    const titulo = (raw.replace(/^vaga\s+/i, '').split(/\s+[-|]\s+/)[0] || slug.replace(/-/g, ' '))
-      .trim().slice(0, 60);
+    // "Vaga de emprego de Pintor Predial em São Paulo - SP" → "Pintor Predial"
+    const semPrefixo = raw.replace(/^vaga de (emprego de\s+)?/i, '');
+    const titulo = (semPrefixo.split(/\s+em\s+/i)[0] || slug.replace(/-/g, ' ')).trim().slice(0, 60);
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
     return { titulo, descricao };
   },
 };
 
-const FONTES: Fonte[] = [FONTE_EMPREGOS, FONTE_VAGAS];
+const FONTES: Fonte[] = [FONTE_EMPREGOS, FONTE_INFOJOBS];
 
 @Injectable()
 export class AdminService implements OnModuleInit {
@@ -170,7 +173,14 @@ export class AdminService implements OnModuleInit {
     try {
       const ctrl = new AbortController();
       const t = setTimeout(() => ctrl.abort(), ms);
-      const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: ctrl.signal });
+      const res = await fetch(url, {
+        headers: {
+          'User-Agent': UA,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          'Accept-Language': 'pt-BR,pt;q=0.9,en;q=0.8',
+        },
+        signal: ctrl.signal,
+      });
       clearTimeout(t);
       if (!res.ok) return null;
       return await res.text();
@@ -256,7 +266,7 @@ export class AdminService implements OnModuleInit {
     );
     return {
       fonte: FONTES.map((f) => f.nome).join(' + '),
-      termo: TERMO_BUSCA[opts.categoria] || FONTE_VAGAS.termos[opts.categoria] || '',
+      termo: TERMO_BUSCA[opts.categoria] || FONTE_INFOJOBS.termos[opts.categoria] || '',
       cidade: opts.cidade,
       ...agg,
       somenteWhatsapp: opts.somenteWhatsapp !== false,
