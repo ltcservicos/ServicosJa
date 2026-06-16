@@ -3,6 +3,7 @@ import { SessionProvider, useSession } from './context/SessionContext';
 import { ToastProvider } from './context/ToastContext';
 import { PWAProvider } from './context/PWAContext';
 import { InstallBanner } from './components/InstallBanner';
+import { UpdateBanner } from './components/UpdateBanner';
 
 import { LandingPage } from './pages/LandingPage';
 import { Landing } from './pages/Landing';
@@ -99,6 +100,7 @@ export default function App() {
 
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          <UpdateBanner />
           <InstallBanner />
         </SessionProvider>
         </PWAProvider>
