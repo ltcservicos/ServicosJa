@@ -78,7 +78,7 @@ export function MapaTrabalhos({ trabalhos, pos, raioKm, onInteresse }) {
         <div class="pp-foto" style="background-image:url('${(t.fotos[0] || '').replace(/'/g, '')}')"></div>
         <div class="pp-titulo">${t.titulo}</div>
         <div class="pp-meta">📍 ${t.bairro}${t.distanciaKm != null ? ` · a ${String(t.distanciaKm).replace('.', ',')} km de você` : ''}</div>
-        <button class="pp-btn">❤️ Tenho interesse</button>
+        <button class="pp-btn">🤝 Tenho interesse</button>
       `;
       el.querySelector('.pp-btn').addEventListener('click', () => {
         map.closePopup();

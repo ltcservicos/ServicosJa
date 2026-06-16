@@ -43,8 +43,8 @@ export function Interesses() {
       <Header title="Meus interesses" sub="Trabalhos que você curtiu" />
       <div className="flex-1 overflow-y-auto px-5 pb-4 no-scrollbar">
         {aceites && !temAlgum && (
-          <EmptyState emoji="❤️" titulo="Nada por aqui ainda">
-            Quando você der ❤️ em um trabalho, ele aparece aqui para você acompanhar.
+          <EmptyState emoji="🤝" titulo="Nada por aqui ainda">
+            Quando você demonstrar interesse 🤝 em um trabalho, ele aparece aqui para você acompanhar.
           </EmptyState>
         )}
 

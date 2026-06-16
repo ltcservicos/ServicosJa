@@ -85,7 +85,7 @@ export function Explorar() {
           }
           return;
         }
-        toast('❤️ Interesse enviado! Se o cliente gostar, ele te chama no chat.', 'success');
+        toast('🤝 Interesse enviado! Se o cliente gostar, ele te chama no chat.', 'success');
       })
       .catch((e) => toast(e.message, 'error'));
   };
@@ -216,7 +216,7 @@ export function Explorar() {
                 className="w-[68px] h-[68px] rounded-full bg-emerald-400 text-bg flex items-center justify-center active:scale-90 transition shadow-[0_8px_28px_rgba(52,211,153,0.35)]"
                 aria-label="Tenho interesse"
               >
-                <Icon.HeartFill />
+                <Icon.Handshake />
               </button>
               <span className="text-[12px] font-bold text-emerald-400">Tenho interesse</span>
             </div>
@@ -332,7 +332,7 @@ function SwipeCard({ servico, isTop, depth, onSwipe }) {
         ref={stampAcceptRef}
         className="absolute top-9 right-4 px-5 py-2.5 rounded-xl font-display font-extrabold text-[26px] tracking-wider border-4 border-emerald-400 text-emerald-400 opacity-0 z-[3]"
         style={{ transform: 'rotate(15deg)' }}
-      >QUERO ❤️</div>
+      >FECHOU 🤝</div>
       <div
         ref={stampRejectRef}
         className="absolute top-9 left-4 px-5 py-2.5 rounded-xl font-display font-extrabold text-[26px] tracking-wider border-4 border-red-500 text-red-500 opacity-0 z-[3]"

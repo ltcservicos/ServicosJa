@@ -117,7 +117,7 @@ export function Profissionais() {
               <button onClick={() => onSwipe('yes')}
                 className="w-[68px] h-[68px] rounded-full bg-emerald-400 text-bg flex items-center justify-center active:scale-90 transition shadow-[0_8px_28px_rgba(52,211,153,0.35)]"
                 aria-label="Tenho interesse">
-                <Icon.HeartFill />
+                <Icon.Handshake />
               </button>
               <span className="text-[12px] font-bold text-emerald-400">Tenho interesse</span>
             </div>
@@ -199,7 +199,7 @@ function Cartao({ prof, isTop, depth, onSwipe }) {
       className="swipe-card absolute inset-0 bg-surface rounded-3xl border border-border overflow-hidden shadow-2xl flex flex-col select-none"
       style={{ transform: `scale(${scale}) translateY(${ty}px)`, zIndex: 10 - depth, cursor: isTop ? 'grab' : 'default' }}>
 
-      <div ref={okRef} className="absolute top-9 right-4 px-5 py-2.5 rounded-xl font-display font-extrabold text-[26px] tracking-wider border-4 border-emerald-400 text-emerald-400 opacity-0 z-[3]" style={{ transform: 'rotate(15deg)' }}>QUERO ❤️</div>
+      <div ref={okRef} className="absolute top-9 right-4 px-5 py-2.5 rounded-xl font-display font-extrabold text-[26px] tracking-wider border-4 border-emerald-400 text-emerald-400 opacity-0 z-[3]" style={{ transform: 'rotate(15deg)' }}>FECHOU 🤝</div>
       <div ref={noRef} className="absolute top-9 left-4 px-5 py-2.5 rounded-xl font-display font-extrabold text-[26px] tracking-wider border-4 border-red-500 text-red-500 opacity-0 z-[3]" style={{ transform: 'rotate(-15deg)' }}>PASSO ✖️</div>
 
       {/* Topo com avatar grande */}

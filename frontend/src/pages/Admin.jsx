@@ -313,7 +313,7 @@ function Lista({ externos, onRemover }) {
                 {e.temWhatsapp ? '💬 WhatsApp' : '🔗 Link'}
               </span>
               <span>· {e.fonteNome}</span>
-              <span>· ❤️ {e.interesses}</span>
+              <span>· 🤝 {e.interesses}</span>
             </div>
           </div>
           <button onClick={() => onRemover(e.id)} className="text-red-400 text-[13px] font-semibold px-2 py-1 hover:bg-red-500/10 rounded-lg flex-shrink-0">

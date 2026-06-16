@@ -36,7 +36,7 @@ export function Conversas() {
           <EmptyState emoji="💬" titulo="Nenhuma conversa ainda">
             {souContratante
               ? 'Quando alguém se interessar pelo seu trabalho, toque em "Conversar" para chamar a pessoa aqui.'
-              : 'Quando um cliente gostar de você, a conversa dele aparece aqui. Continue dando ❤️ nos trabalhos!'}
+              : 'Quando um cliente gostar de você, a conversa dele aparece aqui. Continue demonstrando interesse 🤝 nos trabalhos!'}
           </EmptyState>
         )}
 
