@@ -137,8 +137,9 @@ function Importar({ onFeito, onErro }) {
       <div>
         <div className="font-bold text-[17px] mb-1">Importar 1 categoria + cidade</div>
         <div className="text-text-mute text-[13.5px] leading-relaxed">
-          Busca vagas do segmento na cidade e publica as que têm WhatsApp do contratante na descrição.
-          Quando o trabalhador curtir, o app abre o WhatsApp direto.
+          Busca em <b>empregos.com.br</b> e <b>vagas.com.br</b>. Com WhatsApp na descrição, o app abre o WhatsApp
+          direto quando o trabalhador curte. Desmarcando o filtro abaixo, traz também anúncios sem WhatsApp
+          (o app abre o anúncio original) — mais volume no feed.
         </div>
       </div>
 
@@ -163,7 +164,7 @@ function Importar({ onFeito, onErro }) {
 
       <button onClick={buscar} disabled={loading}
         className="min-h-[52px] rounded-xl font-bold text-[16px] bg-accent text-bg disabled:opacity-50">
-        {loading ? 'Buscando no empregos.com.br…' : '🔎 Buscar e publicar'}
+        {loading ? 'Buscando em empregos.com.br + vagas.com.br…' : '🔎 Buscar e publicar'}
       </button>
 
       {result && (
@@ -206,8 +207,9 @@ function Varredura({ onFlash, onErro }) {
       <div>
         <div className="font-bold text-[17px] mb-1">🌎 Varredura geral (automática)</div>
         <div className="text-text-mute text-[13.5px] leading-relaxed">
-          Varre <b>todas as categorias</b> nas cidades abaixo e publica tudo que tiver WhatsApp.
-          Roda também <b>sozinha toda madrugada</b> (~4h). Os trabalhos aparecem na aba "Publicados".
+          Varre <b>todas as categorias</b> nas cidades abaixo, em <b>2 fontes</b> (empregos.com.br + vagas.com.br),
+          publicando vagas com WhatsApp e também algumas sem (abrem o anúncio). Roda <b>sozinha toda madrugada</b> (~4h).
+          Os trabalhos aparecem na aba "Publicados".
         </div>
       </div>
 

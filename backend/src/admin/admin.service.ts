@@ -71,6 +71,74 @@ function extrairWhatsapp(texto: string): string | null {
   return null;
 }
 
+// === Fontes plugáveis de vagas ===
+// Cada fonte sabe montar a URL de busca e ler o HTML (lista + detalhe).
+// Adicionar uma fonte nova = só escrever mais um objeto destes.
+type Fonte = {
+  id: string;
+  nome: string;
+  termos: Record<string, string>;                                  // categoria → termo de busca
+  listaUrl: (termo: string, citySlug: string) => string;
+  extrair: (html: string, citySlug: string) => { url: string; slug: string }[];
+  parse: (html: string, slug: string, termo: string, cidade: string) => { titulo: string; descricao: string };
+};
+
+const FONTE_EMPREGOS: Fonte = {
+  id: 'empregos',
+  nome: 'empregos.com.br',
+  termos: TERMO_BUSCA,
+  listaUrl: (termo) => `https://www.empregos.com.br/vagas/${termo}`,
+  extrair: (html, citySlug) => {
+    const todos = Array.from(html.matchAll(/\/vaga\/(\d+)\/([a-z0-9-]+)/g)).map((m) => ({
+      url: `https://www.empregos.com.br/vaga/${m[1]}/${m[2]}`, slug: m[2],
+    }));
+    const unicos = Array.from(new Map(todos.map((v) => [v.url, v])).values());
+    // a cidade vem no slug: ...-em-{cidade}-{uf}
+    return unicos.filter((v) => v.slug.includes(`-em-${citySlug}-`) || v.slug.includes(`-${citySlug}-`));
+  },
+  parse: (html, slug, termo, cidade) => {
+    const titulo = (html.match(/<title>([^<]+)<\/title>/i)?.[1] || slug.replace(/-/g, ' '))
+      .replace(/\s*[-|].*$/, '').trim().slice(0, 60);
+    const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
+    return { titulo, descricao };
+  },
+};
+
+const FONTE_VAGAS: Fonte = {
+  id: 'vagas',
+  nome: 'vagas.com.br',
+  termos: {
+    'Encanamento e hidráulica': 'encanador',
+    'Elétrica': 'eletricista',
+    'Pintura': 'pintor',
+    'Reparos em eletrodomésticos': 'tecnico-de-eletrodomesticos',
+    'Pedreiro e reformas pequenas': 'pedreiro',
+    'Marcenaria e montagem de móveis': 'marceneiro',
+    'Limpeza pesada': 'auxiliar-de-limpeza',
+    'Jardinagem': 'jardineiro',
+    'Chaveiro': 'chaveiro',
+    'Ar-condicionado e refrigeração': 'tecnico-de-refrigeracao',
+  },
+  // vagas.com.br filtra a cidade na própria URL
+  listaUrl: (termo, citySlug) =>
+    citySlug ? `https://www.vagas.com.br/vagas-de-${termo}-em-${citySlug}` : `https://www.vagas.com.br/vagas-de-${termo}`,
+  extrair: (html) => {
+    const todos = Array.from(html.matchAll(/\/vagas\/(v\d+)\/([a-z0-9-]+)/g)).map((m) => ({
+      url: `https://www.vagas.com.br/vagas/${m[1]}/${m[2]}`, slug: m[2],
+    }));
+    return Array.from(new Map(todos.map((v) => [v.url, v])).values());
+  },
+  parse: (html, slug, termo, cidade) => {
+    const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
+    const titulo = (raw.replace(/^vaga\s+/i, '').split(/\s+[-|]\s+/)[0] || slug.replace(/-/g, ' '))
+      .trim().slice(0, 60);
+    const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
+    return { titulo, descricao };
+  },
+};
+
+const FONTES: Fonte[] = [FONTE_EMPREGOS, FONTE_VAGAS];
+
 @Injectable()
 export class AdminService implements OnModuleInit {
   private readonly log = new Logger('AdminService');
@@ -161,64 +229,87 @@ export class AdminService implements OnModuleInit {
     return fotos[categoria] || fotos['Pintura'];
   }
 
-  // === Importação automática do empregos.com.br ===
-  async importarEmpregos(opts: {
+  // === Importação automática (roda TODAS as fontes e junta o resultado) ===
+  async importar(opts: {
     categoria: string;
     cidade: string;
     bairro?: string;
     somenteWhatsapp?: boolean;
     limite?: number;
   }) {
-    const termo = TERMO_BUSCA[opts.categoria];
-    if (!termo) throw new BadRequestException('A categoria "Outros" não tem busca automática. Use "Postar manual".');
+    if (!FONTES.some((f) => f.termos[opts.categoria])) {
+      throw new BadRequestException('A categoria "Outros" não tem busca automática. Use "Postar manual".');
+    }
+    const resultados: any[] = [];
+    for (const fonte of FONTES) {
+      try { resultados.push(await this.importarDeFonte(fonte, opts)); } catch {}
+    }
+    const agg = resultados.reduce(
+      (a, r) => ({
+        encontradas: a.encontradas + (r.encontradas || 0),
+        naCidade: a.naCidade + (r.naCidade || 0),
+        comWhatsapp: a.comWhatsapp + (r.comWhatsapp || 0),
+        publicadas: a.publicadas + (r.publicadas || 0),
+        itens: a.itens.concat(r.itens || []),
+      }),
+      { encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] as any[] },
+    );
+    return {
+      fonte: FONTES.map((f) => f.nome).join(' + '),
+      termo: TERMO_BUSCA[opts.categoria] || FONTE_VAGAS.termos[opts.categoria] || '',
+      cidade: opts.cidade,
+      ...agg,
+      somenteWhatsapp: opts.somenteWhatsapp !== false,
+      porFonte: resultados.map((r) => ({ fonte: r.fonte, publicadas: r.publicadas, comWhatsapp: r.comWhatsapp, erro: r.erro })),
+    };
+  }
+
+  // Importa de UMA fonte. somenteWhatsapp=false publica também anúncios sem
+  // WhatsApp (vira "Contato pelo anúncio" → abre a URL original), com teto
+  // maxSemWhatsapp pra não inundar o feed de uma categoria/cidade.
+  private async importarDeFonte(
+    fonte: Fonte,
+    opts: { categoria: string; cidade: string; bairro?: string; somenteWhatsapp?: boolean; limite?: number; maxSemWhatsapp?: number },
+  ) {
+    const termo = fonte.termos[opts.categoria];
+    if (!termo) return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] };
     const somenteWhatsapp = opts.somenteWhatsapp !== false; // padrão: true
     const limite = Math.min(opts.limite || 12, 20);
+    const maxSemWhatsapp = opts.maxSemWhatsapp ?? 4;
     const citySlug = slugify(opts.cidade);
 
-    const lista = await this.fetchTexto(`https://www.empregos.com.br/vagas/${termo}`);
+    const lista = await this.fetchTexto(fonte.listaUrl(termo, citySlug));
     if (!lista) {
-      return { fonte: 'empregos.com.br', encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [], erro: 'Não foi possível acessar o empregos.com.br agora.' };
+      return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [], erro: `Não foi possível acessar ${fonte.nome} agora.` };
     }
 
-    // Links de vaga: /vaga/{id}/{slug-com-cidade}
-    const todos = Array.from(lista.matchAll(/\/vaga\/(\d+)\/([a-z0-9-]+)/g)).map((m) => ({
-      url: `https://www.empregos.com.br/vaga/${m[1]}/${m[2]}`,
-      slug: m[2],
-    }));
-    const unicos = Array.from(new Map(todos.map((v) => [v.url, v])).values());
-    const encontradas = unicos.length;
-
-    // Filtra pela cidade (o slug termina com -em-{cidade}-{uf})
-    const naCidade = unicos.filter((v) => v.slug.includes(`-em-${citySlug}-`) || v.slug.includes(`-${citySlug}-`));
-    const alvo = (naCidade.length > 0 ? naCidade : []).slice(0, limite);
+    const vagas = fonte.extrair(lista, citySlug);
+    const encontradas = vagas.length;
+    const alvo = vagas.slice(0, limite + maxSemWhatsapp + 8);
 
     const sistemaId = await this.getSistemaId();
     const coords = await this.geocode(opts.bairro || '', opts.cidade);
 
-    let comWhatsapp = 0;
-    let publicadas = 0;
+    let comWhatsapp = 0, publicadas = 0, semWhatsPub = 0;
     const itens: any[] = [];
 
     for (const vaga of alvo) {
-      // Pula se já importado
+      if (publicadas >= limite) break;
       const existe = await this.prisma.servico.findFirst({ where: { fonteUrl: vaga.url } });
       if (existe) continue;
 
       const html = await this.fetchTexto(vaga.url);
       if (!html) continue;
 
-      const titulo = (html.match(/<title>([^<]+)<\/title>/i)?.[1] || vaga.slug.replace(/-/g, ' '))
-        .replace(/\s*[-|].*$/, '')
-        .trim()
-        .slice(0, 60);
-      const descMatch = html.match(/<meta name="description" content="([^"]+)"/i);
-      const descricao = (descMatch?.[1] || `Vaga de ${termo} em ${opts.cidade}.`).slice(0, 500);
-
+      const { titulo, descricao } = fonte.parse(html, vaga.slug, termo, opts.cidade);
       const whatsapp = extrairWhatsapp(html);
       if (whatsapp) comWhatsapp++;
 
-      // Regra do admin: por padrão só publica quando tem WhatsApp do contratante
-      if (somenteWhatsapp && !whatsapp) continue;
+      // Sem WhatsApp: só publica se o filtro estiver desligado e dentro do teto
+      if (!whatsapp) {
+        if (somenteWhatsapp) continue;
+        if (semWhatsPub >= maxSemWhatsapp) continue;
+      }
 
       await this.prisma.servico.create({
         data: {
@@ -235,25 +326,17 @@ export class AdminService implements OnModuleInit {
           origem: 'EXTERNO',
           contatoExterno: whatsapp,
           contatoTipo: whatsapp ? 'WHATSAPP' : 'LINK',
-          fonteNome: 'empregos.com.br',
+          fonteNome: fonte.nome,
           fonteUrl: vaga.url,
         },
       });
       publicadas++;
-      itens.push({ titulo, contato: whatsapp ? 'WhatsApp' : 'Link', url: vaga.url });
+      if (!whatsapp) semWhatsPub++;
+      itens.push({ titulo, contato: whatsapp ? 'WhatsApp' : 'Link', fonte: fonte.nome, url: vaga.url });
+      await sleep(250); // educado com a fonte
     }
 
-    return {
-      fonte: 'empregos.com.br',
-      termo,
-      cidade: opts.cidade,
-      encontradas,
-      naCidade: naCidade.length,
-      comWhatsapp,
-      publicadas,
-      somenteWhatsapp,
-      itens,
-    };
+    return { fonte: fonte.nome, termo, cidade: opts.cidade, encontradas, naCidade: encontradas, comWhatsapp, publicadas, somenteWhatsapp, itens };
   }
 
   // === Varredura geral: todas as categorias × várias cidades ===
@@ -270,7 +353,8 @@ export class AdminService implements OnModuleInit {
       iniciada: true,
       cidades: lista,
       categorias: Object.keys(TERMO_BUSCA).length,
-      mensagem: `Varrendo ${Object.keys(TERMO_BUSCA).length} categorias em ${lista.length} cidade(s). Os trabalhos vão aparecendo na aba "Publicados".`,
+      fontes: FONTES.map((f) => f.nome),
+      mensagem: `Varrendo ${Object.keys(TERMO_BUSCA).length} categorias em ${lista.length} cidade(s), em ${FONTES.length} fontes (${FONTES.map((f) => f.nome).join(', ')}). Os trabalhos vão aparecendo na aba "Publicados".`,
     };
   }
 
@@ -281,13 +365,17 @@ export class AdminService implements OnModuleInit {
     try {
       for (const cidade of cidades) {
         for (const categoria of Object.keys(TERMO_BUSCA)) {
-          try {
-            const r = await this.importarEmpregos({ categoria, cidade, somenteWhatsapp: true, limite: 8 });
-            publicadas += r.publicadas || 0;
-            comWhatsapp += r.comWhatsapp || 0;
-            varridas += r.naCidade || 0;
-          } catch {}
-          await sleep(800); // educado com o site-fonte
+          for (const fonte of FONTES) {
+            try {
+              // Varredura busca volume: inclui anúncios sem WhatsApp (até 3 por
+              // categoria/cidade/fonte) — o resto que tiver WhatsApp entra todo.
+              const r = await this.importarDeFonte(fonte, { categoria, cidade, somenteWhatsapp: false, limite: 6, maxSemWhatsapp: 3 });
+              publicadas += r.publicadas || 0;
+              comWhatsapp += r.comWhatsapp || 0;
+              varridas += r.encontradas || 0;
+            } catch {}
+            await sleep(800); // educado com as fontes
+          }
         }
       }
     } finally {
@@ -295,10 +383,11 @@ export class AdminService implements OnModuleInit {
       this.ultimaVarredura = {
         em: new Date().toISOString(),
         cidades,
-        varridas, comWhatsapp, publicadas,
+        fontes: FONTES.map((f) => f.nome),
+        varridas, comWhatsapp, comLink: publicadas - comWhatsapp, publicadas,
         duracaoSeg: Math.round((Date.now() - inicio) / 1000),
       };
-      this.log.log(`✅ Varredura concluída: ${publicadas} publicadas (${comWhatsapp} c/ WhatsApp) em ${cidades.length} cidades`);
+      this.log.log(`✅ Varredura concluída: ${publicadas} publicadas (${comWhatsapp} c/ WhatsApp, ${publicadas - comWhatsapp} c/ link) em ${cidades.length} cidades × ${FONTES.length} fontes`);
     }
   }
 

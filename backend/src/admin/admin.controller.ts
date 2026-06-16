@@ -30,7 +30,7 @@ export class AdminController {
   @Post('importar')
   @UseGuards(AdminGuard)
   importar(@Body() body: { categoria: string; cidade: string; bairro?: string; somenteWhatsapp?: boolean }) {
-    return this.admin.importarEmpregos(body);
+    return this.admin.importar(body);
   }
 
   @Post('externo')
