@@ -571,7 +571,10 @@ export class ServicosService {
       } else {
         resultado = 'NAO_SELECIONADO';
       }
-      return { ...serialized, valorProposto: acao.valorProposto, resultado };
+      // Vaga externa: o prestador já demonstrou interesse, então devolvemos o
+      // contato (WhatsApp) de volta — pra ele reabrir o link depois.
+      const extra = s.origem === 'EXTERNO' ? { contatoExterno: s.contatoExterno } : {};
+      return { ...serialized, ...extra, valorProposto: acao.valorProposto, resultado };
     }).filter(Boolean);
   }
 }

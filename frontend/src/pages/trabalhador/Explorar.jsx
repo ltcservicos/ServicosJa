@@ -89,10 +89,10 @@ export function Explorar() {
               `Olá! Vi o trabalho "${r.titulo}" em ${r.bairro || r.cidade} no ServiçoJá e tenho interesse. Podemos conversar?`,
             );
             window.open(`https://wa.me/55${r.contatoExterno}?text=${msg}`, '_blank');
-            toast('Abrindo o WhatsApp do contratante… 💬', 'success');
+            toast('Abrindo o WhatsApp… 💬 Guardamos em "Interesses" pra reabrir depois.', 'success');
           } else if (r.fonteUrl) {
             window.open(r.fonteUrl, '_blank');
-            toast('Abrindo o anúncio original… 🔗', 'success');
+            toast('Abrindo o anúncio… 🔗 Guardamos em "Interesses" pra reabrir depois.', 'success');
           }
           return;
         }

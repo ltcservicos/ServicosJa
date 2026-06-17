@@ -28,15 +28,31 @@ export function Interesses() {
     return () => { alive = false; clearInterval(id); };
   }, []);
 
+  // Vagas externas (por contrato) ficam numa seção à parte: não têm "cliente
+  // decidindo" — o caminho é reabrir o anúncio/WhatsApp quando quiser.
+  const externos = aceites ? aceites.filter((s) => s.origem === 'EXTERNO') : [];
+  const proprios = aceites ? aceites.filter((s) => s.origem !== 'EXTERNO') : [];
   const grupos = aceites
     ? {
-        'Fechados com você': aceites.filter((s) => s.resultado === 'APROVADO'),
-        'Esperando resposta': aceites.filter((s) => s.resultado === 'AGUARDANDO'),
-        'Já feitos': aceites.filter((s) => s.resultado === 'CONCLUIDO'),
-        'Não rolou': aceites.filter((s) => s.resultado === 'NAO_SELECIONADO'),
+        'Fechados com você': proprios.filter((s) => s.resultado === 'APROVADO'),
+        'Esperando resposta': proprios.filter((s) => s.resultado === 'AGUARDANDO'),
+        'Já feitos': proprios.filter((s) => s.resultado === 'CONCLUIDO'),
+        'Não rolou': proprios.filter((s) => s.resultado === 'NAO_SELECIONADO'),
       }
     : {};
   const temAlgum = aceites && aceites.length > 0;
+
+  // Reabre o contato da vaga externa (WhatsApp ou anúncio original)
+  const abrirExterno = (s) => {
+    if (s.contatoTipo === 'WHATSAPP' && s.contatoExterno) {
+      const msg = encodeURIComponent(
+        `Olá! Vi o trabalho "${s.titulo}" em ${s.bairro || s.cidade} no ServiçoJá e tenho interesse. Podemos conversar?`,
+      );
+      window.open(`https://wa.me/55${s.contatoExterno}?text=${msg}`, '_blank');
+    } else if (s.fonteUrl) {
+      window.open(s.fonteUrl, '_blank');
+    }
+  };
 
   return (
     <>
@@ -46,6 +62,33 @@ export function Interesses() {
           <EmptyState emoji="🤝" titulo="Nada por aqui ainda">
             Quando você demonstrar interesse 🤝 em um trabalho, ele aparece aqui para você acompanhar.
           </EmptyState>
+        )}
+
+        {externos.length > 0 && (
+          <div>
+            <SectionTitle>🤝 Vagas por contrato</SectionTitle>
+            {externos.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => abrirExterno(s)}
+                className="w-full text-left bg-surface border border-border rounded-2xl p-3.5 mb-2.5 flex gap-3 items-center hover:border-text-mute transition active:scale-[0.99]"
+              >
+                <div
+                  className="w-[62px] h-[62px] rounded-xl bg-cover bg-center flex-shrink-0 border border-border flex items-center justify-center text-2xl bg-surface-2"
+                  style={s.fotos[0] ? { backgroundImage: `url('${s.fotos[0]}')` } : {}}
+                >
+                  {!s.fotos[0] && catIcone(s.categoria)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-[15px] mb-1 truncate">{s.titulo}</div>
+                  <span className="inline-flex px-2 py-0.5 rounded text-[11.5px] font-bold bg-blue-500/15 text-blue-300">
+                    {s.contatoTipo === 'WHATSAPP' ? '💬 Abrir WhatsApp de novo' : '🔗 Abrir anúncio de novo'}
+                  </span>
+                </div>
+                <span className="text-text-mute">↗</span>
+              </button>
+            ))}
+          </div>
         )}
 
         {Object.entries(grupos).map(([titulo, items]) => {
