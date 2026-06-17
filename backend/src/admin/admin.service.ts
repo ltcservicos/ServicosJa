@@ -78,7 +78,7 @@ function extrairWhatsapp(texto: string): string | null {
 type Fonte = {
   id: string;
   nome: string;
-  termos: Record<string, string>;                                  // categoria → termo de busca
+  termos: Record<string, string | string[]>;                       // categoria → termo(s) de busca
   listaUrl: (termo: string, citySlug: string) => string;
   extrair: (html: string, citySlug: string) => { url: string; slug: string }[];
   parse: (html: string, slug: string, termo: string, cidade: string) => { titulo: string; descricao: string; cidade?: string | null; uf?: string | null };
@@ -111,17 +111,17 @@ const FONTE_INFOJOBS: Fonte = {
   id: 'infojobs',
   nome: 'infojobs.com.br',
   termos: {
-    'Encanamento e hidráulica': 'encanador',
-    'Elétrica': 'eletricista',
-    'Pintura': 'pintor',
-    'Reparos em eletrodomésticos': 'eletrodomesticos',
-    'Pedreiro e reformas pequenas': 'pedreiro',
-    'Marcenaria e montagem de móveis': 'marceneiro',
-    'Limpeza pesada': 'faxineiro',
-    'Jardinagem': 'jardineiro',
-    'Chaveiro': 'chaveiro',
-    'Ar-condicionado e refrigeração': 'refrigeracao',
-    'Vidraceiro': 'vidraceiro',
+    'Encanamento e hidráulica': ['encanador', 'bombeiro hidraulico', 'instalador hidraulico'],
+    'Elétrica': ['eletricista', 'eletricista predial', 'eletricista de manutencao', 'auxiliar eletrica'],
+    'Pintura': ['pintor', 'pintor predial', 'auxiliar de pintura'],
+    'Reparos em eletrodomésticos': ['eletrodomesticos', 'tecnico de eletrodomesticos', 'tecnico lavadora'],
+    'Pedreiro e reformas pequenas': ['pedreiro', 'servente de obras', 'ajudante de obras', 'oficial de obras'],
+    'Marcenaria e montagem de móveis': ['marceneiro', 'montador de moveis', 'auxiliar de marcenaria'],
+    'Limpeza pesada': ['faxineiro', 'auxiliar de limpeza', 'diarista', 'servicos gerais'],
+    'Jardinagem': ['jardineiro', 'auxiliar de jardinagem', 'paisagismo'],
+    'Chaveiro': ['chaveiro'],
+    'Ar-condicionado e refrigeração': ['refrigeracao', 'tecnico de ar condicionado', 'mecanico de refrigeracao'],
+    'Vidraceiro': ['vidraceiro', 'instalador de vidros', 'auxiliar de vidracaria'],
   },
   // a própria infojobs filtra a cidade na URL (empregos-em-{cidade}.aspx)
   listaUrl: (termo, citySlug) =>
@@ -314,7 +314,7 @@ export class AdminService implements OnModuleInit {
     );
     return {
       fonte: FONTES.map((f) => f.nome).join(' + '),
-      termo: TERMO_BUSCA[opts.categoria] || FONTE_INFOJOBS.termos[opts.categoria] || '',
+      termo: TERMO_BUSCA[opts.categoria] || [].concat(FONTE_INFOJOBS.termos[opts.categoria] || [])[0] || '',
       cidade: opts.cidade,
       ...agg,
       somenteWhatsapp: opts.somenteWhatsapp !== false,
@@ -329,21 +329,31 @@ export class AdminService implements OnModuleInit {
     fonte: Fonte,
     opts: { categoria: string; cidade: string; bairro?: string; somenteWhatsapp?: boolean; limite?: number; maxSemWhatsapp?: number },
   ) {
-    const termo = fonte.termos[opts.categoria];
-    if (!termo) return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] };
+    const termoDef = fonte.termos[opts.categoria];
+    if (!termoDef) return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] };
+    const termos = Array.isArray(termoDef) ? termoDef : [termoDef];
+    const termo = termos[0]; // usado como rótulo/fallback
     const somenteWhatsapp = opts.somenteWhatsapp !== false; // padrão: true
     const limite = Math.min(opts.limite || 12, 60);
     const maxSemWhatsapp = opts.maxSemWhatsapp ?? 4;
     const citySlug = slugify(opts.cidade);
 
-    const lista = await this.fetchTexto(fonte.listaUrl(termo, citySlug));
-    if (!lista) {
-      return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [], erro: `Não foi possível acessar ${fonte.nome} agora.` };
+    // Busca em CADA termo da categoria e junta os candidatos (dedup por URL).
+    const vagas: { url: string; slug: string }[] = [];
+    const vistos = new Set<string>();
+    for (const tm of termos) {
+      const lista = await this.fetchTexto(fonte.listaUrl(tm, citySlug));
+      if (!lista) continue;
+      for (const v of fonte.extrair(lista, citySlug)) {
+        if (!vistos.has(v.url)) { vistos.add(v.url); vagas.push(v); }
+      }
+      if (termos.length > 1) await sleep(400); // educado entre buscas
     }
-
-    const vagas = fonte.extrair(lista, citySlug);
+    if (vagas.length === 0) {
+      return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [], erro: `Sem resultados em ${fonte.nome} agora.` };
+    }
     const encontradas = vagas.length;
-    const alvo = vagas.slice(0, limite + maxSemWhatsapp + 8);
+    const alvo = vagas.slice(0, limite + maxSemWhatsapp + 20);
 
     const sistemaId = await this.getSistemaId();
     const alvoUf = await this.ufDaCidade(opts.cidade); // estado da cidade pedida (ex: SP)
