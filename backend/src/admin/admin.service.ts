@@ -294,6 +294,7 @@ export class AdminService implements OnModuleInit {
     somenteWhatsapp?: boolean;
     limite?: number;
     maxSemWhatsapp?: number;
+    raioRegiaoKm?: number;
   }) {
     if (!FONTES.some((f) => f.termos[opts.categoria])) {
       throw new BadRequestException('A categoria "Outros" não tem busca automática. Use "Postar manual".');
@@ -327,7 +328,7 @@ export class AdminService implements OnModuleInit {
   // maxSemWhatsapp pra não inundar o feed de uma categoria/cidade.
   private async importarDeFonte(
     fonte: Fonte,
-    opts: { categoria: string; cidade: string; bairro?: string; somenteWhatsapp?: boolean; limite?: number; maxSemWhatsapp?: number },
+    opts: { categoria: string; cidade: string; bairro?: string; somenteWhatsapp?: boolean; limite?: number; maxSemWhatsapp?: number; raioRegiaoKm?: number },
   ) {
     const termoDef = fonte.termos[opts.categoria];
     if (!termoDef) return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] };
@@ -357,8 +358,9 @@ export class AdminService implements OnModuleInit {
 
     const sistemaId = await this.getSistemaId();
     const alvoUf = await this.ufDaCidade(opts.cidade); // estado da cidade pedida (ex: SP)
+    const alvoCoords = opts.raioRegiaoKm ? await this.geocodeCidade(opts.cidade) : null; // p/ filtro por raio
 
-    let comWhatsapp = 0, publicadas = 0, semWhatsPub = 0, foraDoEstado = 0;
+    let comWhatsapp = 0, publicadas = 0, semWhatsPub = 0, foraDoEstado = 0, foraDaRegiao = 0;
     const itens: any[] = [];
 
     for (const vaga of alvo) {
@@ -396,6 +398,13 @@ export class AdminService implements OnModuleInit {
       const cidadeFinal = cidadeReal || opts.cidade;
       const coords = await this.geocodeCidade(cidadeFinal);
 
+      // Filtro por raio: mantém só vagas dentro de X km da cidade pedida
+      // (ex: Guarulhos + zona norte de SP, sem trazer Ribeirão/Santos/interior).
+      if (opts.raioRegiaoKm && alvoCoords && coords) {
+        const dist = this._haversine(alvoCoords.lat, alvoCoords.lng, coords.lat, coords.lng);
+        if (dist > opts.raioRegiaoKm) { foraDaRegiao++; continue; }
+      }
+
       await this.prisma.servico.create({
         data: {
           solicitanteId: sistemaId,
@@ -421,7 +430,15 @@ export class AdminService implements OnModuleInit {
       await sleep(250); // educado com a fonte
     }
 
-    return { fonte: fonte.nome, termo, cidade: opts.cidade, encontradas, naCidade: encontradas, comWhatsapp, publicadas, foraDoEstado, somenteWhatsapp, itens };
+    return { fonte: fonte.nome, termo, cidade: opts.cidade, encontradas, naCidade: encontradas, comWhatsapp, publicadas, foraDoEstado, foraDaRegiao, somenteWhatsapp, itens };
+  }
+
+  // distância em km entre dois pontos (haversine) — p/ filtro por raio da região
+  private _haversine(lat1: number, lng1: number, lat2: number, lng2: number) {
+    const R = 6371, rad = (g: number) => (g * Math.PI) / 180;
+    const dLat = rad(lat2 - lat1), dLng = rad(lng2 - lng1);
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
   // === Varredura geral: todas as categorias × várias cidades ===
@@ -454,7 +471,7 @@ export class AdminService implements OnModuleInit {
             try {
               // Varredura busca volume: inclui anúncios sem WhatsApp (até 3 por
               // categoria/cidade/fonte) — o resto que tiver WhatsApp entra todo.
-              const r = await this.importarDeFonte(fonte, { categoria, cidade, somenteWhatsapp: false, limite: 6, maxSemWhatsapp: 3 });
+              const r = await this.importarDeFonte(fonte, { categoria, cidade, somenteWhatsapp: false, limite: 6, maxSemWhatsapp: 3, raioRegiaoKm: 50 });
               publicadas += r.publicadas || 0;
               comWhatsapp += r.comWhatsapp || 0;
               varridas += r.encontradas || 0;
