@@ -81,7 +81,7 @@ type Fonte = {
   termos: Record<string, string>;                                  // categoria → termo de busca
   listaUrl: (termo: string, citySlug: string) => string;
   extrair: (html: string, citySlug: string) => { url: string; slug: string }[];
-  parse: (html: string, slug: string, termo: string, cidade: string) => { titulo: string; descricao: string };
+  parse: (html: string, slug: string, termo: string, cidade: string) => { titulo: string; descricao: string; cidade?: string | null; uf?: string | null };
 };
 
 const FONTE_EMPREGOS: Fonte = {
@@ -101,7 +101,11 @@ const FONTE_EMPREGOS: Fonte = {
     const titulo = (html.match(/<title>([^<]+)<\/title>/i)?.[1] || slug.replace(/-/g, ' '))
       .replace(/\s*[-|].*$/, '').trim().slice(0, 60);
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
-    return { titulo, descricao };
+    // cidade/uf no slug: ...-em-{cidade}-{uf}
+    const m = slug.match(/-em-(.+)-([a-z]{2})$/);
+    const cidadeReal = m ? m[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : null;
+    const uf = m ? m[2].toUpperCase() : null;
+    return { titulo, descricao, cidade: cidadeReal, uf };
   },
 };
 
@@ -140,11 +144,15 @@ const FONTE_INFOJOBS: Fonte = {
   },
   parse: (html, slug, termo, cidade) => {
     const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
-    // "Vaga de emprego de Pintor Predial em São Paulo - SP" → "Pintor Predial"
+    // "Vaga de emprego de Pintor Predial em Niterói,- RJ" → cargo "Pintor Predial", cidade "Niterói", uf "RJ"
     const semPrefixo = raw.replace(/^vaga de (emprego de\s+)?/i, '');
-    const titulo = (semPrefixo.split(/\s+em\s+/i)[0] || slug.replace(/-/g, ' ')).trim().slice(0, 60);
+    const partes = semPrefixo.split(/\s+em\s+/i);
+    const titulo = (partes[0] || slug.replace(/-/g, ' ')).trim().slice(0, 60);
+    const locPart = partes.slice(1).join(' em ').trim();          // "Niterói,- RJ"
+    const uf = (locPart.match(/\b([A-Z]{2})\b\s*$/) || [])[1] || null;
+    const cidadeReal = (locPart.split(/\s*[,\-]\s*/)[0] || '').trim() || null;
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
-    return { titulo, descricao };
+    return { titulo, descricao, cidade: cidadeReal, uf };
   },
 };
 
@@ -156,6 +164,8 @@ export class AdminService implements OnModuleInit {
   private varrendo = false;                 // trava: uma varredura por vez
   private ultimaVarredura: any = null;       // resumo da última varredura
   private ultimoDiaCron = '';                // controle do cron diário
+  private geoCache = new Map<string, { lat: number; lng: number } | null>(); // coords por cidade
+  private ufCache = new Map<string, string | null>();                         // UF (estado) por cidade
 
   constructor(private prisma: PrismaService) {}
 
@@ -229,6 +239,35 @@ export class AdminService implements OnModuleInit {
       } catch {}
     }
     return null;
+  }
+
+  // Geocodifica uma cidade (com cache) — usado pra localizar cada vaga na cidade real dela
+  private async geocodeCidade(cidade: string) {
+    const key = slugify(cidade);
+    if (!key) return null;
+    if (this.geoCache.has(key)) return this.geoCache.get(key)!;
+    const c = await this.geocode('', cidade);
+    this.geoCache.set(key, c);
+    return c;
+  }
+
+  // Descobre o estado (UF) de uma cidade via Nominatim (com cache)
+  private async ufDaCidade(cidade: string): Promise<string | null> {
+    const key = slugify(cidade);
+    if (!key) return null;
+    if (this.ufCache.has(key)) return this.ufCache.get(key)!;
+    const txt = await this.fetchTexto(
+      `https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=1&q=${encodeURIComponent(cidade + ', Brasil')}`,
+      6000,
+    );
+    let uf: string | null = null;
+    try {
+      const data = JSON.parse(txt || '[]');
+      const iso = data?.[0]?.address?.['ISO3166-2-lvl4']; // ex: "BR-SP"
+      if (iso) uf = String(iso).split('-').pop()!.toUpperCase();
+    } catch {}
+    this.ufCache.set(key, uf);
+    return uf;
   }
 
   private fotoCategoria(categoria: string) {
@@ -308,9 +347,9 @@ export class AdminService implements OnModuleInit {
     const alvo = vagas.slice(0, limite + maxSemWhatsapp + 8);
 
     const sistemaId = await this.getSistemaId();
-    const coords = await this.geocode(opts.bairro || '', opts.cidade);
+    const alvoUf = await this.ufDaCidade(opts.cidade); // estado da cidade pedida (ex: SP)
 
-    let comWhatsapp = 0, publicadas = 0, semWhatsPub = 0;
+    let comWhatsapp = 0, publicadas = 0, semWhatsPub = 0, foraDoEstado = 0;
     const itens: any[] = [];
 
     for (const vaga of alvo) {
@@ -321,7 +360,21 @@ export class AdminService implements OnModuleInit {
       const html = await this.fetchTexto(vaga.url);
       if (!html) continue;
 
-      const { titulo, descricao } = fonte.parse(html, vaga.slug, termo, opts.cidade);
+      const parsed = fonte.parse(html, vaga.slug, termo, opts.cidade);
+      const { titulo, descricao } = parsed;
+      const cidadeReal = parsed.cidade || null;
+      const ufReal = parsed.uf || null;
+
+      // Filtro de região: a fonte completa com vagas de outras cidades/estados.
+      // Mantém só a MESMA cidade ou o MESMO estado (UF) da cidade pedida.
+      if (cidadeReal) {
+        const mesmaCidade = slugify(cidadeReal) === citySlug;
+        const mesmoEstado = !!alvoUf && !!ufReal && ufReal === alvoUf;
+        if (!mesmaCidade && !mesmoEstado) { foraDoEstado++; continue; }
+      } else if (fonte.id === 'infojobs') {
+        continue; // sem cidade detectada na infojobs → pula (evita rótulo errado)
+      }
+
       const whatsapp = extrairWhatsapp(html);
       if (whatsapp) comWhatsapp++;
 
@@ -331,15 +384,18 @@ export class AdminService implements OnModuleInit {
         if (semWhatsPub >= maxSemWhatsapp) continue;
       }
 
+      const cidadeFinal = cidadeReal || opts.cidade;
+      const coords = await this.geocodeCidade(cidadeFinal);
+
       await this.prisma.servico.create({
         data: {
           solicitanteId: sistemaId,
-          titulo: titulo || `${termo} em ${opts.cidade}`,
+          titulo: titulo || `${termo} em ${cidadeFinal}`,
           descricao,
           categoria: opts.categoria,
           fotos: this.fotoCategoria(opts.categoria),
-          cidade: opts.cidade,
-          bairro: opts.bairro || opts.cidade,
+          cidade: cidadeFinal,
+          bairro: cidadeFinal,
           lat: coords?.lat ?? null,
           lng: coords?.lng ?? null,
           estado: 'ABERTO',
@@ -352,11 +408,11 @@ export class AdminService implements OnModuleInit {
       });
       publicadas++;
       if (!whatsapp) semWhatsPub++;
-      itens.push({ titulo, contato: whatsapp ? 'WhatsApp' : 'Link', fonte: fonte.nome, url: vaga.url });
+      itens.push({ titulo, cidade: cidadeFinal, contato: whatsapp ? 'WhatsApp' : 'Link', fonte: fonte.nome, url: vaga.url });
       await sleep(250); // educado com a fonte
     }
 
-    return { fonte: fonte.nome, termo, cidade: opts.cidade, encontradas, naCidade: encontradas, comWhatsapp, publicadas, somenteWhatsapp, itens };
+    return { fonte: fonte.nome, termo, cidade: opts.cidade, encontradas, naCidade: encontradas, comWhatsapp, publicadas, foraDoEstado, somenteWhatsapp, itens };
   }
 
   // === Varredura geral: todas as categorias × várias cidades ===
