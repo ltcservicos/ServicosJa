@@ -101,13 +101,9 @@ const FONTE_EMPREGOS: Fonte = {
     const titulo = (html.match(/<title>([^<]+)<\/title>/i)?.[1] || slug.replace(/-/g, ' '))
       .replace(/\s*[-|].*$/, '').trim().slice(0, 60);
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
-    // cidade/uf no slug: ...-em-{cidade}-{uf}. O cargo pode ter "-em-" também
-    // (ex: tecnico-em-refrigeracao-em-guarulhos-sp) → pega o ÚLTIMO "-em-".
-    const idx = slug.lastIndexOf('-em-');
-    const m = idx >= 0 ? slug.slice(idx + 4).match(/^(.+)-([a-z]{2})$/) : null;
-    const cidadeReal = m ? m[1].replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) : null;
-    const uf = m ? m[2].toUpperCase() : null;
-    return { titulo, descricao, cidade: cidadeReal, uf };
+    // o empregos já filtra pela cidade pedida no slug → a cidade real é a
+    // própria buscada (com acento certo). Sem cidade/uf: o importador usa opts.cidade.
+    return { titulo, descricao };
   },
 };
 
