@@ -3,6 +3,26 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { catIcone } from '../lib/constants';
 
+// Vagas externas são geocodificadas pro centro da cidade — então várias caem
+// no MESMO ponto e empilham. Pra ficar legível, espalhamos num raio pequeno em
+// volta do centro, com um deslocamento ESTÁVEL por vaga (derivado do id, não
+// muda a cada render). Só aplica em quem colide; vaga precisa fica no lugar.
+function hashId(id) {
+  let h = 2166136261;
+  const s = String(id);
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function desloca(t) {
+  const h = hashId(t.id);
+  const ang = ((h % 3600) / 3600) * 2 * Math.PI;             // ângulo estável
+  const rad = 0.28 + (((h >>> 12) % 1000) / 1000) * 0.72;     // 0.28..1.0 do raio
+  const maxLat = 0.014;                                        // ~1,5 km
+  const dLat = Math.cos(ang) * rad * maxLat;
+  const dLng = (Math.sin(ang) * rad * maxLat) / Math.max(0.3, Math.cos((t.lat * Math.PI) / 180));
+  return [t.lat + dLat, t.lng + dLng];
+}
+
 // Mapa dinâmico (Leaflet + OpenStreetMap): você no centro, trabalhos como pins.
 // Tocar num pin abre o cartãozinho com botão "Tenho interesse".
 export function MapaTrabalhos({ trabalhos, pos, raioKm, onInteresse }) {
@@ -60,8 +80,14 @@ export function MapaTrabalhos({ trabalhos, pos, raioKm, onInteresse }) {
       }
     }
 
-    trabalhos.filter((t) => t.lat != null && t.lng != null).forEach((t) => {
-      const marker = L.marker([t.lat, t.lng], {
+    const comGeo = trabalhos.filter((t) => t.lat != null && t.lng != null);
+    // conta quantas vagas caem em cada ponto — as que colidem a gente espalha
+    const colisoes = {};
+    comGeo.forEach((t) => { const k = `${t.lat},${t.lng}`; colisoes[k] = (colisoes[k] || 0) + 1; });
+
+    comGeo.forEach((t) => {
+      const ponto = colisoes[`${t.lat},${t.lng}`] > 1 ? desloca(t) : [t.lat, t.lng];
+      const marker = L.marker(ponto, {
         icon: L.divIcon({
           className: '',
           html: `<div class="pin-cat">${catIcone(t.categoria)}</div>`,
@@ -69,7 +95,7 @@ export function MapaTrabalhos({ trabalhos, pos, raioKm, onInteresse }) {
           iconAnchor: [20, 20],
         }),
       }).addTo(layer);
-      bounds.push([t.lat, t.lng]);
+      bounds.push(ponto);
 
       // Popup montado na mão para poder ligar o clique do botão
       const el = document.createElement('div');
