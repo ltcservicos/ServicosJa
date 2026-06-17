@@ -134,7 +134,7 @@ const FONTE_INFOJOBS: Fonte = {
     // Tenta casar a cidade exata; se zerar, usa o resultado da URL já filtrada
     // por cidade (enviesado pra cidade pedida).
     const naCidade = unicos.filter((v) => v.slug.includes(`-em-${citySlug}`) || v.slug.includes(`-${citySlug}-`));
-    return naCidade.length ? naCidade : unicos.slice(0, 12);
+    return naCidade.length ? naCidade : unicos.slice(0, 40);
   },
   parse: (html, slug, termo, cidade) => {
     const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
@@ -252,6 +252,7 @@ export class AdminService implements OnModuleInit {
     bairro?: string;
     somenteWhatsapp?: boolean;
     limite?: number;
+    maxSemWhatsapp?: number;
   }) {
     if (!FONTES.some((f) => f.termos[opts.categoria])) {
       throw new BadRequestException('A categoria "Outros" não tem busca automática. Use "Postar manual".');
@@ -290,7 +291,7 @@ export class AdminService implements OnModuleInit {
     const termo = fonte.termos[opts.categoria];
     if (!termo) return { fonte: fonte.nome, encontradas: 0, naCidade: 0, comWhatsapp: 0, publicadas: 0, itens: [] };
     const somenteWhatsapp = opts.somenteWhatsapp !== false; // padrão: true
-    const limite = Math.min(opts.limite || 12, 20);
+    const limite = Math.min(opts.limite || 12, 60);
     const maxSemWhatsapp = opts.maxSemWhatsapp ?? 4;
     const citySlug = slugify(opts.cidade);
 
