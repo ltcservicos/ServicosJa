@@ -10,6 +10,7 @@ export const CATEGORIAS = [
   { nome: 'Jardinagem', icone: '🌿', curto: 'Jardim' },
   { nome: 'Chaveiro', icone: '🔑', curto: 'Chaveiro' },
   { nome: 'Ar-condicionado e refrigeração', icone: '❄️', curto: 'Ar-condicionado' },
+  { nome: 'Vidraceiro', icone: '🪟', curto: 'Vidraceiro' },
   { nome: 'Outros', icone: '🛠️', curto: 'Outros' },
 ];
 
@@ -30,6 +31,7 @@ export const DEFAULT_PHOTOS = {
   'Jardinagem': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
   'Chaveiro': 'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=800&q=80',
   'Ar-condicionado e refrigeração': 'https://images.unsplash.com/photo-1585104555336-4d4d10a59850?w=800&q=80',
+  'Vidraceiro': 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?w=800&q=80',
 };
 
 export const fotoDefault = (categoria) =>

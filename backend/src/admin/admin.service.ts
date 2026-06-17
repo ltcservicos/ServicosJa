@@ -20,6 +20,7 @@ const TERMO_BUSCA: Record<string, string> = {
   'Jardinagem': 'jardineiro',
   'Chaveiro': 'chaveiro',
   'Ar-condicionado e refrigeração': 'tecnico-de-refrigeracao',
+  'Vidraceiro': 'vidraceiro',
 };
 
 function slugify(s: string) {
@@ -118,6 +119,7 @@ const FONTE_INFOJOBS: Fonte = {
     'Jardinagem': 'jardineiro',
     'Chaveiro': 'chaveiro',
     'Ar-condicionado e refrigeração': 'refrigeracao',
+    'Vidraceiro': 'vidraceiro',
   },
   // a própria infojobs filtra a cidade na URL (empregos-em-{cidade}.aspx)
   listaUrl: (termo, citySlug) =>
@@ -241,6 +243,7 @@ export class AdminService implements OnModuleInit {
       'Jardinagem': 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?w=800&q=80',
       'Chaveiro': 'https://images.unsplash.com/photo-1582139329536-e7284fece509?w=800&q=80',
       'Ar-condicionado e refrigeração': 'https://images.unsplash.com/photo-1585104555336-4d4d10a59850?w=800&q=80',
+      'Vidraceiro': 'https://images.unsplash.com/photo-1604014237800-1c9102c219da?w=800&q=80',
     };
     return fotos[categoria] || fotos['Pintura'];
   }
