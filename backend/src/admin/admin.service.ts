@@ -146,9 +146,10 @@ const FONTE_INFOJOBS: Fonte = {
     const raw = (html.match(/<title>\s*([^<]+?)\s*<\/title>/i)?.[1] || '');
     // "Vaga de emprego de Pintor Predial em Niterói,- RJ" → cargo "Pintor Predial", cidade "Niterói", uf "RJ"
     const semPrefixo = raw.replace(/^vaga de (emprego de\s+)?/i, '');
+    // a CIDADE vem após o ÚLTIMO " em " (o cargo pode ter " em ", ex: "Técnico em Refrigeração em Guarulhos")
     const partes = semPrefixo.split(/\s+em\s+/i);
-    const titulo = (partes[0] || slug.replace(/-/g, ' ')).trim().slice(0, 60);
-    const locPart = partes.slice(1).join(' em ').trim();          // "Niterói,- RJ"
+    const locPart = (partes.length > 1 ? partes[partes.length - 1] : '').trim();   // "Guarulhos,- SP"
+    const titulo = ((partes.length > 1 ? partes.slice(0, -1).join(' em ') : partes[0]) || slug.replace(/-/g, ' ')).trim().slice(0, 60);
     const uf = (locPart.match(/\b([A-Z]{2})\b\s*$/) || [])[1] || null;
     const cidadeReal = (locPart.split(/\s*[,\-]\s*/)[0] || '').trim() || null;
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
