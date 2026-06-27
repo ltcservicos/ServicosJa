@@ -45,6 +45,13 @@ export class AdminController {
     return this.admin.iniciarVarredura(body?.cidades);
   }
 
+  // Rotina noturna (Guarulhos + região): ofícios link+WhatsApp, gerais só WhatsApp
+  @Post('varrer-noturna')
+  @UseGuards(AdminGuard)
+  varrerNoturna() {
+    return this.admin.iniciarVarreduraNoturna();
+  }
+
   @Get('varrer/status')
   @UseGuards(AdminGuard)
   varrerStatus() {

@@ -122,6 +122,8 @@ const FONTE_INFOJOBS: Fonte = {
     'Chaveiro': ['chaveiro'],
     'Ar-condicionado e refrigeração': ['refrigeracao', 'tecnico de ar condicionado', 'mecanico de refrigeracao'],
     'Vidraceiro': ['vidraceiro', 'instalador de vidros', 'auxiliar de vidracaria'],
+    // "Serviços em geral" — usado só na rotina noturna (somente WhatsApp)
+    'Outros': ['servicos gerais', 'auxiliar de servicos gerais', 'ajudante geral', 'zelador', 'auxiliar de manutencao'],
   },
   // a própria infojobs filtra a cidade na URL (empregos-em-{cidade}.aspx)
   listaUrl: (termo, citySlug) =>
@@ -168,22 +170,66 @@ export class AdminService implements OnModuleInit {
 
   constructor(private prisma: PrismaService) {}
 
-  // Cron diário (~4h da manhã): varre as cidades padrão + as que já têm trabalho importado
+  // Cron diário (~4h da manhã): rotina noturna focada na região de Guarulhos
   onModuleInit() {
     const tick = async () => {
       const agora = new Date();
       const dia = agora.toISOString().slice(0, 10);
       if (agora.getHours() === 4 && this.ultimoDiaCron !== dia && !this.varrendo) {
         this.ultimoDiaCron = dia;
-        const extras = await this.prisma.servico.findMany({
-          where: { origem: 'EXTERNO' }, select: { cidade: true }, distinct: ['cidade'], take: 20,
-        });
-        const cidades = Array.from(new Set([...CIDADES_PADRAO, ...extras.map((e) => e.cidade)]));
-        this.log.log(`🌙 Varredura automática diária em ${cidades.length} cidades`);
-        this.varrerAsync(cidades);
+        this.log.log('🌙 Disparando varredura noturna (Guarulhos + região)');
+        this.varrerNoturna();
       }
     };
     setInterval(tick, 30 * 60000); // checa a cada 30 min
+  }
+
+  // === Rotina NOTURNA (a que roda automática toda noite) ===
+  // Para a região de Guarulhos (raio 40km, pega zona norte de SP e Grande SP):
+  //  • categorias-ofício: publica tudo (link + WhatsApp)
+  //  • "Serviços em geral" (Outros): SÓ vagas com WhatsApp (lead direto)
+  async varrerNoturna() {
+    if (this.varrendo) return { ok: false, jaRodando: true, mensagem: 'Já existe uma varredura em andamento.' };
+    this.varrendo = true;
+    const inicio = Date.now();
+    const CIDADE = 'Guarulhos', RAIO = 40;
+    let publicadas = 0, comWhatsapp = 0, geralWhats = 0;
+    try {
+      // 1) Ofícios (todas as categorias menos "Outros") — link + WhatsApp
+      const oficios = Object.keys(FONTE_INFOJOBS.termos).filter((c) => c !== 'Outros');
+      for (const categoria of oficios) {
+        for (const fonte of FONTES) {
+          try {
+            const r = await this.importarDeFonte(fonte, { categoria, cidade: CIDADE, somenteWhatsapp: false, limite: 40, maxSemWhatsapp: 40, raioRegiaoKm: RAIO });
+            publicadas += r.publicadas || 0; comWhatsapp += r.comWhatsapp || 0;
+          } catch {}
+          await sleep(800);
+        }
+      }
+      // 2) Serviços em geral (Outros) — SOMENTE com WhatsApp
+      for (const fonte of FONTES) {
+        try {
+          const r = await this.importarDeFonte(fonte, { categoria: 'Outros', cidade: CIDADE, somenteWhatsapp: true, limite: 40, raioRegiaoKm: RAIO });
+          publicadas += r.publicadas || 0; geralWhats += r.publicadas || 0;
+        } catch {}
+        await sleep(800);
+      }
+    } finally {
+      this.varrendo = false;
+      this.ultimaVarredura = {
+        em: new Date().toISOString(), tipo: 'noturna', cidade: CIDADE, raioKm: RAIO,
+        publicadas, comWhatsapp, geralWhats, duracaoSeg: Math.round((Date.now() - inicio) / 1000),
+      };
+      this.log.log(`🌙 Varredura noturna concluída: ${publicadas} publicadas (${comWhatsapp} ofícios c/ WhatsApp, ${geralWhats} serviços gerais)`);
+    }
+    return { ok: true };
+  }
+
+  // Dispara a rotina noturna em background (responde na hora). A mesma que o cron usa.
+  iniciarVarreduraNoturna() {
+    if (this.varrendo) return { ok: false, jaRodando: true, mensagem: 'Já existe uma varredura em andamento.' };
+    this.varrerNoturna(); // sem await — roda em segundo plano
+    return { ok: true, iniciada: true, mensagem: 'Varredura noturna iniciada (Guarulhos + região). Vai aparecendo em "Publicados".' };
   }
 
   private async fetchTexto(url: string, ms = 12000): Promise<string | null> {
