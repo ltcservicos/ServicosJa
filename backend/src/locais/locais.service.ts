@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CATEGORIAS, CIDADES, CategoriaSeed, CidadeSeed, faixaPreco, slugLocal } from './locais.data';
 
-const SITE = process.env.SITE_URL || 'https://trampo.blog';
+const SITE = process.env.SITE_URL || 'https://servicoja.digital';
 
 function esc(s: string) {
   return (s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

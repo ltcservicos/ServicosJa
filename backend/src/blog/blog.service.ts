@@ -3,7 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { KEYWORDS, KeywordSeed } from './keywords';
 import { CATEGORIAS as LOC_CATS, CIDADES as LOC_CIDADES, slugLocal } from '../locais/locais.data';
 
-const SITE = process.env.SITE_URL || 'http://76.13.230.109:8080';
+const SITE = process.env.SITE_URL || 'https://servicoja.digital';
 
 function slugify(s: string) {
   return s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
