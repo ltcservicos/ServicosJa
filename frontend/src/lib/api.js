@@ -128,6 +128,7 @@ class AdminApi {
   resumo()              { return this.request('GET', '/resumo'); }
   importar(body)        { return this.request('POST', '/importar', body); }
   varrer(cidades)       { return this.request('POST', '/varrer', { cidades }); }
+  varrerNoturna()       { return this.request('POST', '/varrer-noturna'); }
   varrerStatus()        { return this.request('GET', '/varrer/status'); }
   postarExterno(body)   { return this.request('POST', '/externo', body); }
   externos()            { return this.request('GET', '/externos'); }

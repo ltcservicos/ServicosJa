@@ -178,9 +178,8 @@ function Importar({ onFeito, onErro }) {
   );
 }
 
-/* Varredura geral: todas as categorias × várias cidades, em background */
+/* Varredura noturna: Guarulhos + região, em background (a mesma do cron das ~4h) */
 function Varredura({ onFlash, onErro }) {
-  const [cidades, setCidades] = useState('São Paulo, Guarulhos, Rio de Janeiro, Belo Horizonte, Curitiba');
   const [status, setStatus] = useState(null);
 
   const carregar = () => adminApi.varrerStatus().then(setStatus).catch(() => {});
@@ -191,10 +190,8 @@ function Varredura({ onFlash, onErro }) {
   }, []);
 
   const varrer = async () => {
-    const lista = cidades.split(',').map((c) => c.trim()).filter(Boolean);
-    if (!lista.length) { onErro('Informe ao menos uma cidade'); return; }
     try {
-      const r = await adminApi.varrer(lista);
+      const r = await adminApi.varrerNoturna();
       if (r.jaRodando) { onErro('Já tem uma varredura rodando — aguarde terminar.'); return; }
       onFlash(r.mensagem);
       carregar();
@@ -205,18 +202,13 @@ function Varredura({ onFlash, onErro }) {
     <div className="bg-surface border border-accent/40 rounded-2xl p-5 flex flex-col gap-3"
       style={{ background: 'linear-gradient(135deg, rgba(214,255,58,.06), transparent)' }}>
       <div>
-        <div className="font-bold text-[17px] mb-1">🌎 Varredura geral (automática)</div>
+        <div className="font-bold text-[17px] mb-1">🌙 Varredura noturna (Guarulhos + região)</div>
         <div className="text-text-mute text-[13.5px] leading-relaxed">
-          Varre <b>todas as categorias</b> nas cidades abaixo, em <b>2 fontes</b> (empregos.com.br + infojobs.com.br),
-          publicando vagas com WhatsApp e também algumas sem (abrem o anúncio). Roda <b>sozinha toda madrugada</b> (~4h).
-          Os trabalhos aparecem na aba "Publicados".
+          Busca <b>todos os ofícios</b> na região de Guarulhos (raio 40 km, pega a zona norte de SP e a Grande SP),
+          publicando link e WhatsApp; e <b>serviços em geral só com WhatsApp</b> (lead direto). Roda <b>sozinha toda
+          madrugada</b> (~1h, horário de Brasília). Os trabalhos aparecem na aba "Publicados".
         </div>
       </div>
-
-      <Campo label="Cidades (separadas por vírgula)">
-        <textarea value={cidades} onChange={(e) => setCidades(e.target.value)}
-          className="w-full bg-bg border border-border rounded-xl px-4 py-3 text-[14px] outline-none focus:border-accent resize-none min-h-[60px]" />
-      </Campo>
 
       {status?.varrendo ? (
         <div className="min-h-[48px] rounded-xl bg-bg border border-border flex items-center justify-center gap-2 text-[14px] font-bold text-accent">
@@ -224,14 +216,14 @@ function Varredura({ onFlash, onErro }) {
         </div>
       ) : (
         <button onClick={varrer} className="min-h-[48px] rounded-xl font-bold text-[15px] bg-accent text-bg">
-          🚀 Varrer todas as categorias agora
+          🌙 Rodar a varredura noturna agora
         </button>
       )}
 
       {status?.ultima && (
         <div className="text-[12.5px] text-text-dim bg-bg border border-border rounded-xl p-3 leading-relaxed">
-          Última varredura: <b className="text-emerald-400">{status.ultima.publicadas}</b> publicadas ·{' '}
-          {status.ultima.comWhatsapp} com WhatsApp · {status.ultima.cidades.length} cidades ·{' '}
+          Última: <b className="text-emerald-400">{status.ultima.publicadas}</b> publicadas ·{' '}
+          {status.ultima.comWhatsapp ?? 0} ofícios c/ WhatsApp · {status.ultima.geralWhats ?? 0} serviços gerais ·{' '}
           {status.ultima.duracaoSeg}s
         </div>
       )}
