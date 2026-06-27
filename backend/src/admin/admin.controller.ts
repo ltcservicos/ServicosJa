@@ -102,6 +102,13 @@ export class AdminController {
     return this.blog.agendarLote();
   }
 
+  // Publica AGORA o próximo artigo pendente (mesma rotina do cron matinal)
+  @Post('blog/publicar-do-dia')
+  @UseGuards(AdminGuard)
+  blogPublicarDoDia() {
+    return this.blog.publicarProximoPendente();
+  }
+
   @Post('blog/posts/:id/publicar')
   @UseGuards(AdminGuard)
   blogPublicar(@Param('id') id: string) {

@@ -16,11 +16,12 @@ function esc(s: string) {
 @Injectable()
 export class BlogService implements OnModuleInit {
   private readonly log = new Logger('BlogService');
+  private ultimoPostDia = ''; // controle do cron "1 post por dia"
   constructor(private prisma: PrismaService) {}
 
-  // Cron simples: publica posts agendados cujo horário já chegou
   onModuleInit() {
-    const tick = async () => {
+    // (1) Cron simples: publica posts AGENDADOS cujo horário já chegou
+    const tickAgendados = async () => {
       try {
         const r = await this.prisma.post.updateMany({
           where: { status: 'AGENDADO', publishAt: { lte: new Date() } },
@@ -29,8 +30,31 @@ export class BlogService implements OnModuleInit {
         if (r.count > 0) this.log.log(`📰 ${r.count} post(s) do blog publicado(s) automaticamente`);
       } catch {}
     };
-    setInterval(tick, 60000);
-    setTimeout(tick, 4000);
+    setInterval(tickAgendados, 60000);
+    setTimeout(tickAgendados, 4000);
+
+    // (2) Cron matinal: publica UM post novo por dia (~8h de Brasília = 11h UTC)
+    const tickManha = async () => {
+      const agora = new Date();
+      const dia = agora.toISOString().slice(0, 10);
+      if (agora.getUTCHours() === 11 && this.ultimoPostDia !== dia) {
+        this.ultimoPostDia = dia;
+        await this.publicarProximoPendente();
+      }
+    };
+    setInterval(tickManha, 20 * 60000); // checa a cada 20 min
+  }
+
+  // Publica o próximo artigo ainda não gerado (na ordem da lista de keywords —
+  // os SEO regionais de Guarulhos vêm primeiro). Roda 1x por dia pelo cron matinal.
+  async publicarProximoPendente() {
+    const existentes = await this.prisma.post.findMany({ select: { keyword: true } });
+    const jaTem = new Set(existentes.map((p) => p.keyword));
+    const proxima = KEYWORDS.find((k) => !jaTem.has(k.keyword));
+    if (!proxima) { this.log.log('📰 Blog: nenhuma keyword pendente para publicar hoje'); return { ok: true, publicado: null }; }
+    await this.gerar(proxima.keyword); // publishAt = agora → PUBLICADO
+    this.log.log(`📰 Post do dia publicado: ${proxima.titulo}`);
+    return { ok: true, publicado: proxima.titulo };
   }
 
   // ---- Geração do HTML do artigo a partir do seed da keyword ----
