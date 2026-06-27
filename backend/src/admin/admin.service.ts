@@ -192,7 +192,7 @@ export class AdminService implements OnModuleInit {
     if (this.varrendo) return { ok: false, jaRodando: true, mensagem: 'Já existe uma varredura em andamento.' };
     this.varrendo = true;
     const inicio = Date.now();
-    const CIDADE = 'Guarulhos', RAIO = 40;
+    const CIDADE = 'Guarulhos', RAIO = 55; // Guarulhos + Grande SP (RMSP), sem Santos/Campinas/interior
     let publicadas = 0, comWhatsapp = 0, geralWhats = 0;
     try {
       // 1) Ofícios (todas as categorias menos "Outros") — link + WhatsApp

@@ -204,7 +204,7 @@ function Varredura({ onFlash, onErro }) {
       <div>
         <div className="font-bold text-[17px] mb-1">🌙 Varredura noturna (Guarulhos + região)</div>
         <div className="text-text-mute text-[13.5px] leading-relaxed">
-          Busca <b>todos os ofícios</b> na região de Guarulhos (raio 40 km, pega a zona norte de SP e a Grande SP),
+          Busca <b>todos os ofícios</b> em Guarulhos + Grande SP (raio 55 km da RMSP, sem Santos/Campinas/interior),
           publicando link e WhatsApp; e <b>serviços em geral só com WhatsApp</b> (lead direto). Roda <b>sozinha toda
           madrugada</b> (~1h, horário de Brasília). Os trabalhos aparecem na aba "Publicados".
         </div>
