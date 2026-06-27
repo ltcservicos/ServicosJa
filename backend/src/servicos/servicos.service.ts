@@ -428,17 +428,23 @@ export class ServicosService {
       return { ...this._serializeServico(s), distanciaKm };
     });
 
-    if (temPos) {
-      // Dentro do raio (quem não tem coordenada continua na lista, no final)
-      if (raioKm && raioKm > 0) {
-        lista = lista.filter((s) => s.distanciaKm === null || s.distanciaKm <= raioKm);
-      }
-      lista.sort((a, b) => {
-        if (a.distanciaKm === null) return 1;
-        if (b.distanciaKm === null) return -1;
-        return a.distanciaKm - b.distanciaKm;
-      });
+    // Dentro do raio (quem não tem coordenada continua na lista, no final)
+    if (temPos && raioKm && raioKm > 0) {
+      lista = lista.filter((s) => s.distanciaKm === null || s.distanciaKm <= raioKm);
     }
+
+    // Prioriza SEMPRE o contato direto: WhatsApp primeiro, depois pedido de
+    // cliente real (chat interno) e, por último, os que só abrem o anúncio.
+    // Dentro de cada grupo, ordena por distância (se houver) e depois recência.
+    const prio = (s: any) => (s.contatoTipo === 'WHATSAPP' ? 0 : s.origem === 'PROPRIO' ? 1 : 2);
+    lista.sort((a, b) => {
+      const pa = prio(a), pb = prio(b);
+      if (pa !== pb) return pa - pb;
+      if (a.distanciaKm != null && b.distanciaKm != null) return a.distanciaKm - b.distanciaKm;
+      if (a.distanciaKm != null) return -1;
+      if (b.distanciaKm != null) return 1;
+      return new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime();
+    });
 
     return lista;
   }
@@ -455,10 +461,20 @@ export class ServicosService {
     const rows = await this.prisma.servico.findMany({
       where,
       orderBy: { criadoEm: 'desc' },
-      take: 60,
+      take: 120,
     });
 
-    return rows.map((s) => {
+    // Prioriza WhatsApp (lead direto), depois pedido de cliente real, depois link
+    const prio = (s: any) => (s.contatoTipo === 'WHATSAPP' ? 0 : s.origem === 'PROPRIO' ? 1 : 2);
+    const ordenadas = rows
+      .sort((a, b) => {
+        const pa = prio(a), pb = prio(b);
+        if (pa !== pb) return pa - pb;
+        return new Date(b.criadoEm).getTime() - new Date(a.criadoEm).getTime();
+      })
+      .slice(0, 60);
+
+    return ordenadas.map((s) => {
       const desc = s.descricao || '';
       return {
         id: s.id,

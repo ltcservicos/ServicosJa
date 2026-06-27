@@ -27,15 +27,26 @@ export function Explorar() {
   const [raio, setRaio] = useState(() => Number(localStorage.getItem('servicoja_raio')) || 0);
   const [swipeHint, setSwipeHint] = useState(() => !localStorage.getItem('servicoja_swipe_hint'));
   const [tipo, setTipo] = useState('todos'); // 'todos' | 'esporadico' | 'contrato'
+  const [soWhats, setSoWhats] = useState(() => {
+    try { const v = localStorage.getItem('servicoja_so_whats'); return v === null ? true : v === '1'; } catch { return true; }
+  });
 
   // Esporádico = pedido pontual de cliente (origem PROPRIO);
   // Por contrato = vaga externa importada (origem EXTERNO).
-  const lista = (feed || []).filter((s) =>
+  const listaTipo = (feed || []).filter((s) =>
     tipo === 'todos' ? true : tipo === 'contrato' ? s.origem === 'EXTERNO' : s.origem !== 'EXTERNO',
   );
+  // "Só com WhatsApp": esconde os EXTERNO que só abrem o anúncio (mantém pedido
+  // de cliente real, que dá contato direto pelo chat).
+  const lista = listaTipo.filter((s) => !(soWhats && s.origem === 'EXTERNO' && s.contatoTipo !== 'WHATSAPP'));
+  const escondidasSemWhats = listaTipo.length - lista.length;
   const nEspor = (feed || []).filter((s) => s.origem !== 'EXTERNO').length;
   const nContr = (feed || []).filter((s) => s.origem === 'EXTERNO').length;
   const escolherTipo = (t) => { setTipo(t); setIdx(0); };
+  const toggleSoWhats = () => {
+    setSoWhats((v) => { const nv = !v; try { localStorage.setItem('servicoja_so_whats', nv ? '1' : '0'); } catch {} return nv; });
+    setIdx(0);
+  };
 
   const loadFeed = useCallback(async (p = pos, r = raio) => {
     try {
@@ -117,11 +128,14 @@ export function Explorar() {
   }, []);
 
   const empty = feed && idx >= lista.length;
-  const vazioTitulo = raio > 0 ? `Nada num raio de ${raio} km`
+  const vazioTitulo = soWhats && escondidasSemWhats > 0 ? 'Nenhuma vaga com WhatsApp aqui'
+    : raio > 0 ? `Nada num raio de ${raio} km`
     : tipo === 'esporadico' ? 'Nenhum pedido de cliente agora'
     : tipo === 'contrato' ? 'Nenhuma vaga por contrato agora'
     : 'Você viu tudo por hoje';
-  const vazioSub = raio > 0 ? 'Tente aumentar o raio ou toque em "Todos" para ver trabalhos de toda a cidade.'
+  const vazioSub = soWhats && escondidasSemWhats > 0
+      ? `${escondidasSemWhats} vaga${escondidasSemWhats > 1 ? 's' : ''} sem WhatsApp escondida${escondidasSemWhats > 1 ? 's' : ''}. Desmarque "💬 Só com WhatsApp" para ver todas.`
+    : raio > 0 ? 'Tente aumentar o raio ou toque em "Todos" para ver trabalhos de toda a cidade.'
     : tipo === 'esporadico' ? 'Pedidos pontuais de clientes aparecem aqui. Enquanto isso, veja a aba 🤝 Contrato.'
     : tipo === 'contrato' ? 'Vagas fixas aparecem aqui. Toque em atualizar para conferir.'
     : 'Quando aparecer trabalho novo do seu ramo, ele chega aqui. Toque em atualizar para conferir.';
@@ -161,6 +175,23 @@ export function Explorar() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Filtro: só com WhatsApp (lead direto) — ligado por padrão */}
+      <div className="px-5 pb-2 flex-shrink-0">
+        <button
+          onClick={toggleSoWhats}
+          className="inline-flex items-center gap-2 text-[13px] font-bold rounded-xl border px-3 py-2 transition active:scale-95"
+          style={soWhats
+            ? { background: 'rgba(52,211,153,0.15)', color: '#34D399', borderColor: 'rgba(52,211,153,0.55)' }
+            : { background: '#1E1E24', color: '#9C9CA8', borderColor: '#2E2E38' }}
+        >
+          <span className="w-[18px] h-[18px] rounded-md flex items-center justify-center text-[12px] font-extrabold"
+            style={soWhats ? { background: '#34D399', color: '#0E0E10' } : { border: '2px solid #5A5A66' }}>
+            {soWhats ? '✓' : ''}
+          </span>
+          💬 Só com WhatsApp
+        </button>
       </div>
 
       {/* Filtro por distância + alternar mapa */}
