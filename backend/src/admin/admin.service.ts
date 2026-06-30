@@ -82,6 +82,8 @@ type Fonte = {
   listaUrl: (termo: string, citySlug: string) => string;
   extrair: (html: string, citySlug: string) => { url: string; slug: string }[];
   parse: (html: string, slug: string, termo: string, cidade: string) => { titulo: string; descricao: string; cidade?: string | null; uf?: string | null };
+  // true = a vaga ainda está no ar; false = saiu/expirou (revalidação noturna)
+  estaViva?: (html: string) => boolean;
 };
 
 const FONTE_EMPREGOS: Fonte = {
@@ -155,6 +157,9 @@ const FONTE_INFOJOBS: Fonte = {
     const descricao = (html.match(/<meta name="description" content="([^"]+)"/i)?.[1] || `Vaga de ${termo} em ${cidade}.`).slice(0, 500);
     return { titulo, descricao, cidade: cidadeReal, uf };
   },
+  // Vaga viva tem <title> "Vaga de emprego de ...". Quando sai do ar, a infojobs
+  // devolve 200 com a página genérica ("Vagas de Emprego Grátis | Infojobs").
+  estaViva: (html) => /<title>\s*vaga de emprego de\s/i.test(html),
 };
 
 const FONTES: Fonte[] = [FONTE_EMPREGOS, FONTE_INFOJOBS];
@@ -193,7 +198,7 @@ export class AdminService implements OnModuleInit {
     this.varrendo = true;
     const inicio = Date.now();
     const CIDADE = 'Guarulhos', RAIO = 55; // Guarulhos + Grande SP (RMSP), sem Santos/Campinas/interior
-    let publicadas = 0, comWhatsapp = 0, geralWhats = 0;
+    let publicadas = 0, comWhatsapp = 0, geralWhats = 0, removidas = 0;
     try {
       // 1) Ofícios (todas as categorias menos "Outros") — link + WhatsApp
       const oficios = Object.keys(FONTE_INFOJOBS.termos).filter((c) => c !== 'Outros');
@@ -214,15 +219,51 @@ export class AdminService implements OnModuleInit {
         } catch {}
         await sleep(800);
       }
+      // 3) Revalida as vagas já publicadas: remove as que saíram do ar
+      try { removidas = (await this.revalidarExternas(400)).removidas; } catch {}
     } finally {
       this.varrendo = false;
       this.ultimaVarredura = {
         em: new Date().toISOString(), tipo: 'noturna', cidade: CIDADE, raioKm: RAIO,
-        publicadas, comWhatsapp, geralWhats, duracaoSeg: Math.round((Date.now() - inicio) / 1000),
+        publicadas, comWhatsapp, geralWhats, removidas, duracaoSeg: Math.round((Date.now() - inicio) / 1000),
       };
-      this.log.log(`🌙 Varredura noturna concluída: ${publicadas} publicadas (${comWhatsapp} ofícios c/ WhatsApp, ${geralWhats} serviços gerais)`);
+      this.log.log(`🌙 Varredura noturna concluída: +${publicadas} publicadas (${comWhatsapp} c/ WhatsApp), ${removidas} removidas (fora do ar)`);
     }
     return { ok: true };
+  }
+
+  // Revalida vagas externas já no ar: checa na fonte se a vaga ainda existe.
+  // Roda em rodízio (as menos checadas primeiro) pra não martelar a fonte.
+  async revalidarExternas(limite = 300) {
+    const jobs = await this.prisma.servico.findMany({
+      where: { origem: 'EXTERNO', estado: 'ABERTO', fonteUrl: { not: null } },
+      orderBy: { revalidadoEm: { sort: 'asc', nulls: 'first' } },
+      take: limite,
+      select: { id: true, fonteUrl: true, fonteNome: true },
+    });
+    const mortas: string[] = [];
+    const vivas: string[] = [];
+    for (const j of jobs) {
+      const fonte = FONTES.find((f) => f.nome === j.fonteNome);
+      if (!fonte?.estaViva) { vivas.push(j.id); continue; } // fonte sem checagem → mantém
+      const html = await this.fetchTexto(j.fonteUrl!, 10000);
+      if (html == null || fonte.estaViva(html)) {
+        vivas.push(j.id);            // bloqueio/timeout (ambíguo) ou viva → mantém
+      } else {
+        mortas.push(j.id);           // 200 + página genérica → saiu do ar
+      }
+      await sleep(200);
+    }
+    if (mortas.length) {
+      await this.prisma.acaoServico.deleteMany({ where: { servicoId: { in: mortas } } });
+      await this.prisma.notificacao.deleteMany({ where: { servicoId: { in: mortas } } });
+      await this.prisma.servico.deleteMany({ where: { id: { in: mortas } } });
+    }
+    if (vivas.length) {
+      await this.prisma.servico.updateMany({ where: { id: { in: vivas } }, data: { revalidadoEm: new Date() } });
+    }
+    this.log.log(`🧹 Revalidação: ${jobs.length} checadas, ${mortas.length} removidas (fora do ar)`);
+    return { checadas: jobs.length, removidas: mortas.length };
   }
 
   // Dispara a rotina noturna em background (responde na hora). A mesma que o cron usa.

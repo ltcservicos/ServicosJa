@@ -52,6 +52,13 @@ export class AdminController {
     return this.admin.iniciarVarreduraNoturna();
   }
 
+  // Revalida vagas externas já no ar (remove as que saíram da fonte)
+  @Post('revalidar')
+  @UseGuards(AdminGuard)
+  revalidar(@Body() body: { limite?: number }) {
+    return this.admin.revalidarExternas(body?.limite || 300);
+  }
+
   @Get('varrer/status')
   @UseGuards(AdminGuard)
   varrerStatus() {

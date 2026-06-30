@@ -69,6 +69,7 @@ model Servico {
   contatoTipo    String? // WHATSAPP | LINK — como o trabalhador fala com o contratante
   fonteNome      String? // ex: "empregos.com.br" ou "Admin"
   fonteUrl       String? // link da vaga/anúncio original (quando contatoTipo=LINK)
+  revalidadoEm   DateTime? // última vez que o cron checou se a vaga externa segue no ar
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
